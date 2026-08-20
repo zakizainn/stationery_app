@@ -1,0 +1,173 @@
+// Skema database — Aplikasi Manajemen Stationery PT JAI
+// Lihat: Spesifikasi_Teknis_Aplikasi_Stationery_PT_JAI.docx, bagian 4 (Struktur Data)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  staf
+  atasan_departemen
+  superadmin
+  admin_stationery
+}
+
+enum KategoriItem {
+  barang_umum
+  kertas
+  checksheet
+}
+
+enum TipeRequest {
+  rutin
+  order_baru
+}
+
+enum StatusRequest {
+  pending
+  approved
+  rejected
+  diproses
+  selesai
+}
+
+enum StatusApproval {
+  pending
+  approved
+  rejected
+}
+
+enum TipeStockMovement {
+  keluar
+  masuk
+}
+
+model Departemen {
+  id    Int    @id @default(autoincrement())
+  nama  String
+  kode  String @unique
+
+  users     User[]
+  requests  Request[]
+
+  @@map("departemen")
+}
+
+model User {
+  id            Int    @id @default(autoincrement())
+  nik           String @unique
+  nama          String
+  passwordHash  String @map("password_hash")
+  role          Role
+  departemenId  Int    @map("departemen_id")
+  departemen    Departemen @relation(fields: [departemenId], references: [id])
+
+  requests        Request[]      @relation("Pemohon")
+  approvals       Approval[]     @relation("Approver")
+  notifications   Notification[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("user")
+}
+
+model Item {
+  id            Int          @id @default(autoincrement())
+  nama          String
+  kategori      KategoriItem
+  fotoUrl       String?      @map("foto_url")
+  satuan        String
+  stok          Int          @default(0)
+  stokMinimum   Int          @default(0) @map("stok_minimum")
+  bisaDitukar   Boolean      @default(false) @map("bisa_ditukar")
+  jenisKertas   String?      @map("jenis_kertas") // khusus kategori "kertas": A4/A3/A5/Others
+
+  requestItems     RequestItem[] @relation("ItemUtama")
+  requestItemsLama RequestItem[] @relation("ItemLama")
+  stockMovements   StockMovement[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("item")
+}
+
+model Request {
+  id           Int            @id @default(autoincrement())
+  userId       Int            @map("user_id")
+  user         User           @relation("Pemohon", fields: [userId], references: [id])
+  departemenId Int            @map("departemen_id")
+  departemen   Departemen     @relation(fields: [departemenId], references: [id])
+  tipe         TipeRequest
+  status       StatusRequest  @default(pending)
+  catatan      String?
+  tanggal      DateTime       @default(now())
+
+  items        RequestItem[]
+  approvals    Approval[]
+  stockMovements StockMovement[]
+  notifications  Notification[]
+
+  @@map("request")
+}
+
+model RequestItem {
+  id            Int      @id @default(autoincrement())
+  requestId     Int      @map("request_id")
+  request       Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  itemId        Int      @map("item_id")
+  item          Item     @relation("ItemUtama", fields: [itemId], references: [id])
+  qtyDiajukan   Int      @map("qty_diajukan")
+  qtyDisetujui  Int?     @map("qty_disetujui") // diisi admin stationery saat proses (counter offer)
+  itemLamaId    Int?     @map("item_lama_id")  // untuk transaksi penukaran barang
+  itemLama      Item?    @relation("ItemLama", fields: [itemLamaId], references: [id])
+  penggunaan    String?  // khusus kategori "kertas": tujuan pemakaian
+  catatanAdmin  String?  @map("catatan_admin") // alasan penyesuaian qty, bila ada
+
+  @@map("request_item")
+}
+
+// level 1 = atasan departemen, level 2 = superadmin
+model Approval {
+  id          Int             @id @default(autoincrement())
+  requestId   Int             @map("request_id")
+  request     Request         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  approverId  Int             @map("approver_id")
+  approver    User            @relation("Approver", fields: [approverId], references: [id])
+  level       Int
+  status      StatusApproval  @default(pending)
+  catatan     String?         // wajib diisi bila status = rejected
+  tanggal     DateTime?
+
+  @@map("approval")
+}
+
+model StockMovement {
+  id            Int               @id @default(autoincrement())
+  itemId        Int               @map("item_id")
+  item          Item              @relation(fields: [itemId], references: [id])
+  tipe          TipeStockMovement
+  qty           Int
+  refRequestId  Int?              @map("ref_request_id")
+  refRequest    Request?          @relation(fields: [refRequestId], references: [id])
+  tanggal       DateTime          @default(now())
+
+  @@map("stock_movement")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  requestId Int?     @map("request_id")
+  request   Request? @relation(fields: [requestId], references: [id])
+  pesan     String
+  dibaca    Boolean  @default(false)
+  tanggal   DateTime @default(now())
+
+  @@map("notification")
+}
