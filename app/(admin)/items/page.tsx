@@ -8,6 +8,7 @@ interface Item {
   kategori: string;
   satuan: string;
   stok: number;
+  stokBuffer: number;
   stokMinimum: number;
   bisaDitukar: boolean;
   jenisKertas?: string;
@@ -42,6 +43,7 @@ export default function MasterItemsPage() {
   const [satuan, setSatuan] = useState("pcs");
   const [stok, setStok] = useState(0);
   const [stokMinimum, setStokMinimum] = useState(5);
+  const [stokBuffer, setStokBuffer] = useState(0);
   const [bisaDitukar, setBisaDitukar] = useState(false);
   const [jenisKertas, setJenisKertas] = useState("A4");
 
@@ -118,6 +120,7 @@ export default function MasterItemsPage() {
     setSatuan("pcs");
     setStok(0);
     setStokMinimum(5);
+    setStokBuffer(0);
     setBisaDitukar(false);
     setJenisKertas("A4");
     setModalOpen(true);
@@ -130,6 +133,7 @@ export default function MasterItemsPage() {
     setSatuan(item.satuan);
     setStok(item.stok);
     setStokMinimum(item.stokMinimum);
+    setStokBuffer(item.stokBuffer ?? 0);
     setBisaDitukar(item.bisaDitukar);
     setJenisKertas(item.jenisKertas || "A4");
     setModalOpen(true);
@@ -144,6 +148,7 @@ export default function MasterItemsPage() {
       satuan,
       stok: Number(stok),
       stokMinimum: Number(stokMinimum),
+      stokBuffer: Number(stokBuffer),
       bisaDitukar,
       jenisKertas: kategori === "kertas" ? jenisKertas : null,
     };
@@ -447,6 +452,23 @@ export default function MasterItemsPage() {
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
                 />
               </div>
+
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Stok Buffer (Bayangan)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={stokBuffer}
+                  onChange={(e) => setStokBuffer(parseInt(e.target.value) || 0)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Disembunyikan dari staf — mereka melihat stok gudang dikurangi angka ini. Admin tetap
+                  melihat stok gudang asli.
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 pt-2">
@@ -502,7 +524,7 @@ export default function MasterItemsPage() {
               href="/api/items/import"
               className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800"
             >
-              ⬇ Unduh template Excel
+              ⬇ Unduh data seluruh item (untuk diedit/restock massal)
             </a>
 
             <div>

@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     // saja — bypass pagination lewat ?all=1 (tetap hormati filter q/kategori bila ada).
     const returnAll = searchParams.get("all") === "1";
 
-    const [items, total] = await Promise.all([
+    const [rawItems, total] = await Promise.all([
       db.item.findMany({
         where: whereCondition,
         orderBy: { nama: "asc" },
@@ -42,6 +42,16 @@ export async function GET(req: NextRequest) {
       }),
       db.item.count({ where: whereCondition }),
     ]);
+
+    // "Stok bayangan": admin/superadmin lihat stok gudang asli (perlu buat
+    // restock & proses order akurat). Staf/atasan departemen lihat stok
+    // asli dikurangi stokBuffer -- mencegah over-order & jadi safety stock,
+    // tanpa mengubah data stok asli di database.
+    const session = await getServerSession(authOptions);
+    const seesRealStock = session ? ["admin_stationery", "superadmin"].includes(session.user.role) : false;
+    const items = rawItems.map((it) =>
+      seesRealStock ? it : { ...it, stok: Math.max(0, it.stok - it.stokBuffer) }
+    );
 
     return NextResponse.json({
       success: true,
@@ -65,7 +75,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { nama, kategori, satuan, stok, stokMinimum, bisaDitukar, jenisKertas, fotoUrl } = body;
+    const { nama, kategori, satuan, stok, stokMinimum, stokBuffer, bisaDitukar, jenisKertas, fotoUrl } = body;
 
     if (!nama || !kategori || !satuan) {
       return NextResponse.json(
@@ -81,6 +91,7 @@ export async function POST(req: NextRequest) {
         satuan,
         stok: Number(stok) || 0,
         stokMinimum: Number(stokMinimum) || 0,
+        stokBuffer: Number(stokBuffer) || 0,
         bisaDitukar: Boolean(bisaDitukar),
         jenisKertas: kategori === "kertas" ? jenisKertas : null,
         fotoUrl: fotoUrl || null,

@@ -29,11 +29,6 @@ export default function KatalogPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // Daftar lengkap untuk dropdown "tukar dengan barang lain" — dimuat terpisah
-  // dari grid (yang sekarang cuma sebagian), diambil sekali saat dibutuhkan.
-  const [swapOptions, setSwapOptions] = useState<Item[]>([]);
-  const [swapOptionsLoaded, setSwapOptionsLoaded] = useState(false);
-
   // Selected item modal for adding to cart
   const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [qty, setQty] = useState(1);
@@ -106,20 +101,6 @@ export default function KatalogPage() {
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasMore, loading, loadingMore, items.length, search, selectedKategori]);
-
-  // Dimuat sekali saat modal item bisa-tukar pertama kali dibuka.
-  const ensureSwapOptions = () => {
-    if (swapOptionsLoaded) return;
-    fetch("/api/items?all=1")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setSwapOptions(data.data);
-          setSwapOptionsLoaded(true);
-        }
-      })
-      .catch((err) => console.error(err));
-  };
 
   const handleAddToCart = () => {
     if (!activeItem) return;
@@ -310,8 +291,9 @@ export default function KatalogPage() {
                       setActiveItem(item);
                       setQty(1);
                       setPenggunaan("");
-                      setItemLamaId("");
-                      if (item.bisaDitukar) ensureSwapOptions();
+                      // Wajib tukar = tukar dengan barang yang sama (pulpen lama -> pulpen baru),
+                      // bukan pilih bebas barang lain, jadi langsung di-set ke item ini sendiri.
+                      setItemLamaId(item.bisaDitukar ? String(item.id) : "");
                     }}
                     disabled={isOutOfStock}
                     className="bg-slate-900 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
@@ -409,23 +391,12 @@ export default function KatalogPage() {
               {activeItem.bisaDitukar && (
                 <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
                   <label className="block text-xs font-bold text-purple-900 uppercase tracking-wider mb-1">
-                    Penukaran Barang Lama
+                    Penukaran Barang Lama (Wajib)
                   </label>
-                  <p className="text-[11px] text-purple-700 mb-2">
-                    Item ini mensyaratkan penukaran fisik barang lama bila tersedia.
+                  <p className="text-[11px] text-purple-700">
+                    Item ini wajib ditukar dengan <strong>{activeItem.nama}</strong> lama milik kamu saat
+                    pengambilan barang baru — bukan barang lain.
                   </p>
-                  <select
-                    value={itemLamaId}
-                    onChange={(e) => setItemLamaId(e.target.value)}
-                    className="w-full bg-white border border-purple-200 rounded-lg px-2.5 py-1.5 text-xs text-purple-900 font-medium"
-                  >
-                    <option value="">-- Tanpa Penukaran (Barang Baru) --</option>
-                    {(swapOptionsLoaded ? swapOptions : items).map((i) => (
-                      <option key={i.id} value={i.id}>
-                        Tukar dengan: {i.nama}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               )}
 

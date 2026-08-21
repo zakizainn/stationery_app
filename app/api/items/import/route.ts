@@ -19,7 +19,9 @@ function normalizeBoolean(raw: unknown): boolean {
   return ["ya", "yes", "true", "1", "y"].includes(s);
 }
 
-// GET: unduh template Excel kosong (dengan contoh baris) untuk diisi admin.
+// GET: unduh Excel berisi seluruh item yang sudah ada di database (siap diisi
+// STOK_MASUK untuk restock massal, atau field lain untuk update massal).
+// Kalau database masih kosong, unduh template kosong dengan 3 baris contoh.
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
@@ -35,23 +37,44 @@ export async function GET() {
     "JENIS_KERTAS",
     "BISA_DITUKAR",
   ];
-  const example = [
-    ["Pulpen Hitam", "Barang Umum", "pcs", 20, 10, "", "Ya"],
-    ["Kertas HVS A4", "Kertas", "rim", 5, 5, "A4", "Tidak"],
-    ["Checksheet QC", "Checksheet", "lembar", 50, 20, "", "Tidak"],
-  ];
 
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...example]);
+  const KATEGORI_LABEL: Record<string, string> = {
+    barang_umum: "Barang Umum",
+    kertas: "Kertas",
+    checksheet: "Checksheet",
+  };
+
+  const existingItems = await db.item.findMany({ orderBy: { nama: "asc" } });
+
+  const rows =
+    existingItems.length > 0
+      ? existingItems.map((it) => [
+          it.nama,
+          KATEGORI_LABEL[it.kategori] ?? it.kategori,
+          it.satuan,
+          0, // STOK_MASUK sengaja dikosongkan (0) -- admin tinggal isi qty restock, bukan stok total
+          it.stokMinimum,
+          it.jenisKertas ?? "",
+          it.bisaDitukar ? "Ya" : "Tidak",
+        ])
+      : [
+          ["Pulpen Hitam", "Barang Umum", "pcs", 20, 10, "", "Ya"],
+          ["Kertas HVS A4", "Kertas", "rim", 5, 5, "A4", "Tidak"],
+          ["Checksheet QC", "Checksheet", "lembar", 50, 20, "", "Tidak"],
+        ];
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   ws["!cols"] = [{ wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Import Item");
+  XLSX.utils.book_append_sheet(wb, ws, existingItems.length > 0 ? "Data Item" : "Import Item");
 
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  const filename = existingItems.length > 0 ? "data-item-stationery.xlsx" : "template-import-item.xlsx";
 
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": 'attachment; filename="template-import-item.xlsx"',
+      "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
 }
