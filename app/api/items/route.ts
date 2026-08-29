@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { nama, kategori, satuan, stok, stokMinimum, stokBuffer, bisaDitukar, jenisKertas, fotoUrl } = body;
+    const { nama, kategori, satuan, stok, stokMinimum, stokBuffer, harga, bisaDitukar, jenisKertas, fotoUrl } = body;
 
     if (!nama || !kategori || !satuan) {
       return NextResponse.json(
@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
         stok: Number(stok) || 0,
         stokMinimum: Number(stokMinimum) || 0,
         stokBuffer: Number(stokBuffer) || 0,
+        harga: Number(harga) || 0,
         bisaDitukar: Boolean(bisaDitukar),
         jenisKertas: kategori === "kertas" ? jenisKertas : null,
         fotoUrl: fotoUrl || null,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 interface Item {
@@ -23,12 +23,6 @@ export default function KatalogPage() {
   const [cartCount, setCartCount] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Infinite scroll — render 24 item per batch, bukan 240 sekaligus.
-  const BATCH_SIZE = 24;
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
   // Selected item modal for adding to cart
   const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [qty, setQty] = useState(1);
@@ -36,7 +30,7 @@ export default function KatalogPage() {
   const [itemLamaId, setItemLamaId] = useState<string>("");
 
   useEffect(() => {
-    fetchItems({ reset: true });
+    fetchItems();
     updateCartCount();
   }, []);
 
@@ -54,12 +48,9 @@ export default function KatalogPage() {
     }
   };
 
-  const fetchItems = ({ reset }: { reset: boolean }) => {
-    const offset = reset ? 0 : items.length;
-    if (reset) setLoading(true);
-    else setLoadingMore(true);
-
-    let url = `/api/items?limit=${BATCH_SIZE}&offset=${offset}&`;
+  const fetchItems = () => {
+    setLoading(true);
+    let url = "/api/items?";
     if (search) url += `q=${encodeURIComponent(search)}&`;
     if (selectedKategori !== "semua") url += `kategori=${selectedKategori}&`;
 
@@ -67,40 +58,19 @@ export default function KatalogPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setItems((prev) => (reset ? data.data : [...prev, ...data.data]));
-          setHasMore(Boolean(data.pagination?.hasMore));
+          setItems(data.data);
         }
       })
       .catch((err) => console.error(err))
-      .finally(() => {
-        setLoading(false);
-        setLoadingMore(false);
-      });
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchItems({ reset: true });
+      fetchItems();
     }, 300);
     return () => clearTimeout(timer);
   }, [search, selectedKategori]);
-
-  // Sentinel di bawah grid — begitu kelihatan di layar, muat batch berikutnya.
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
-          fetchItems({ reset: false });
-        }
-      },
-      { rootMargin: "200px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasMore, loading, loadingMore, items.length, search, selectedKategori]);
 
   const handleAddToCart = () => {
     if (!activeItem) return;
@@ -128,14 +98,19 @@ export default function KatalogPage() {
       };
 
       if (existingIdx >= 0) {
-        cart[existingIdx] = cartItemObj;
+        // Barang sudah ada di keranjang -- tambahkan qty ke yang sudah ada,
+        // jangan timpa (sebelumnya ini overwrite dan bikin qty lama hilang).
+        cart[existingIdx] = {
+          ...cartItemObj,
+          qty: cart[existingIdx].qty + qty,
+        };
       } else {
         cart.push(cartItemObj);
       }
 
       localStorage.setItem("stationery_cart", JSON.stringify(cart));
       updateCartCount();
-      showToast(`&quot;${activeItem.nama}&quot; ditambahkan ke keranjang!`);
+      showToast(`"${activeItem.nama}" ditambahkan ke keranjang!`);
       setActiveItem(null);
       setQty(1);
       setPenggunaan("");
@@ -291,8 +266,8 @@ export default function KatalogPage() {
                       setActiveItem(item);
                       setQty(1);
                       setPenggunaan("");
-                      // Wajib tukar = tukar dengan barang yang sama (pulpen lama -> pulpen baru),
-                      // bukan pilih bebas barang lain, jadi langsung di-set ke item ini sendiri.
+                      // Wajib tukar = tukar dengan barang yang sama (pulpen lama ->
+                      // pulpen baru), bukan pilih bebas barang lain.
                       setItemLamaId(item.bisaDitukar ? String(item.id) : "");
                     }}
                     disabled={isOutOfStock}
@@ -304,17 +279,6 @@ export default function KatalogPage() {
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* Trigger infinite scroll + status di bawah grid */}
-      {!loading && items.length > 0 && (
-        <div ref={sentinelRef} className="py-6 flex justify-center">
-          {loadingMore ? (
-            <span className="text-xs text-slate-400 font-medium">Memuat barang lainnya...</span>
-          ) : !hasMore ? (
-            <span className="text-xs text-slate-400 font-medium">Semua barang sudah ditampilkan.</span>
-          ) : null}
         </div>
       )}
 

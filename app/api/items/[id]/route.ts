@@ -20,7 +20,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { nama, kategori, satuan, stok, stokMinimum, stokBuffer, bisaDitukar, jenisKertas, fotoUrl } = body;
+    const { nama, kategori, satuan, stok, stokMinimum, stokBuffer, harga, bisaDitukar, jenisKertas, fotoUrl } = body;
 
     const updatedItem = await db.item.update({
       where: { id: itemId },
@@ -31,6 +31,7 @@ export async function PATCH(
         ...(stok !== undefined && { stok: Number(stok) }),
         ...(stokMinimum !== undefined && { stokMinimum: Number(stokMinimum) }),
         ...(stokBuffer !== undefined && { stokBuffer: Number(stokBuffer) }),
+        ...(harga !== undefined && { harga: Number(harga) }),
         ...(bisaDitukar !== undefined && { bisaDitukar: Boolean(bisaDitukar) }),
         jenisKertas: jenisKertas !== undefined ? jenisKertas : undefined,
         fotoUrl: fotoUrl !== undefined ? fotoUrl : undefined,

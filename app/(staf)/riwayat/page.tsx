@@ -7,16 +7,19 @@ export default function RiwayatPage() {
   const { data: session } = useSession();
   const [requests, setRequests] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("semua");
+  const [filterMonth, setFilterMonth] = useState<string>(""); // "" = semua bulan
   const [loading, setLoading] = useState(true);
   const [selectedReq, setSelectedReq] = useState<any | null>(null);
 
   useEffect(() => {
     fetchRequests();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterMonth]);
 
   const fetchRequests = () => {
     setLoading(true);
-    fetch("/api/requests")
+    const url = filterMonth ? `/api/requests?month=${filterMonth}` : "/api/requests";
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -59,9 +62,9 @@ export default function RiwayatPage() {
     selesai: { label: "Selesai / Diambil", style: "bg-purple-50 text-purple-800 border-purple-200" },
   };
 
-  // Order rutin tidak melalui approval siapa pun — status "approved" di sini
-  // cuma berarti "masuk antrian admin", bukan "disetujui atasan/superadmin".
-  // Label khusus supaya tidak menyesatkan staf yang mengajukan order rutin.
+  // Order rutin tidak melalui approval siapa pun -- status "approved" di sini cuma
+  // berarti "masuk antrian admin", bukan "disetujui atasan/superadmin". Label
+  // khusus supaya tidak menyesatkan staf yang mengajukan order rutin.
   function getStatusBadge(r: { status: string; tipe: string }) {
     if (r.tipe === "rutin" && r.status === "approved") {
       return { label: "Menunggu Diproses Admin", style: "bg-blue-50 text-blue-800 border-blue-200" };
@@ -80,28 +83,48 @@ export default function RiwayatPage() {
           </p>
         </div>
 
-        {/* Status Filter */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-          {[
-            { id: "semua", label: "Semua" },
-            { id: "pending", label: "Pending" },
-            { id: "approved", label: "Disetujui" },
-            { id: "diproses", label: "Diproses" },
-            { id: "selesai", label: "Selesai" },
-            { id: "rejected", label: "Ditolak" },
-          ].map((st) => (
-            <button
-              key={st.id}
-              onClick={() => setFilterStatus(st.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                filterStatus === st.id
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60"
-              }`}
-            >
-              {st.label}
-            </button>
-          ))}
+        <div className="flex flex-col sm:items-end gap-2">
+          {/* Filter Bulan */}
+          <div className="flex items-center gap-2">
+            <input
+              type="month"
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700"
+            />
+            {filterMonth && (
+              <button
+                onClick={() => setFilterMonth("")}
+                className="text-xs text-slate-400 hover:text-slate-700 font-semibold cursor-pointer"
+              >
+                Reset bulan
+              </button>
+            )}
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+            {[
+              { id: "semua", label: "Semua" },
+              { id: "pending", label: "Pending" },
+              { id: "approved", label: "Disetujui" },
+              { id: "diproses", label: "Diproses" },
+              { id: "selesai", label: "Selesai" },
+              { id: "rejected", label: "Ditolak" },
+            ].map((st) => (
+              <button
+                key={st.id}
+                onClick={() => setFilterStatus(st.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  filterStatus === st.id
+                    ? "bg-slate-900 text-white shadow-xs"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60"
+                }`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

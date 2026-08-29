@@ -34,9 +34,14 @@ body {
 }
 
 /* Custom Animation Utilities */
+/* Sengaja TANPA transform: elemen manapun yang pakai class ini kadang jadi
+   parent dari modal fixed (mis. <main> di AppShell). transform (bahkan yang
+   'forwards'-nya menempel permanen) membuat browser menjadikan elemen itu
+   containing block baru untuk descendant position:fixed -- modal jadi nempel
+   ke elemen ini, bukan ke viewport, dan butuh discroll kalau halamannya panjang. */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .animate-fade-in {

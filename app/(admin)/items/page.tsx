@@ -10,6 +10,7 @@ interface Item {
   stok: number;
   stokBuffer: number;
   stokMinimum: number;
+  harga: number;
   bisaDitukar: boolean;
   jenisKertas?: string;
   fotoUrl?: string;
@@ -28,6 +29,13 @@ export default function MasterItemsPage() {
     summary: { totalRows: number; created: number; restocked: number; errorCount: number };
     errors: string[];
   } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
 
   // Search & pagination — 240+ item hasil impor Excel butuh ini biar tidak
@@ -44,6 +52,7 @@ export default function MasterItemsPage() {
   const [stok, setStok] = useState(0);
   const [stokMinimum, setStokMinimum] = useState(5);
   const [stokBuffer, setStokBuffer] = useState(0);
+  const [harga, setHarga] = useState(0);
   const [bisaDitukar, setBisaDitukar] = useState(false);
   const [jenisKertas, setJenisKertas] = useState("A4");
 
@@ -89,8 +98,19 @@ export default function MasterItemsPage() {
       const res = await fetch("/api/items/import", { method: "POST", body: formData });
       const data = await res.json();
       if (data.success) {
-        setImportResult({ summary: data.summary, errors: data.errors });
         fetchItems(); // refresh daftar & stok terbaru
+        if (data.errors.length === 0) {
+          // Tidak ada yang perlu ditinjau -- tutup popup otomatis supaya admin
+          // tidak bingung menunggu dan tidak klik "Upload & Proses" berkali-kali
+          // (yang sebelumnya bisa bikin stok ke-restock dobel).
+          setToast(
+            `Import berhasil: ${data.summary.created} item baru dibuat, ${data.summary.restocked} item di-restock.`
+          );
+          closeImportModal();
+        } else {
+          // Ada baris bermasalah -- tetap tampilkan supaya admin bisa tinjau/perbaiki.
+          setImportResult({ summary: data.summary, errors: data.errors });
+        }
       } else {
         setImportResult({
           summary: { totalRows: 0, created: 0, restocked: 0, errorCount: 1 },
@@ -121,6 +141,7 @@ export default function MasterItemsPage() {
     setStok(0);
     setStokMinimum(5);
     setStokBuffer(0);
+    setHarga(0);
     setBisaDitukar(false);
     setJenisKertas("A4");
     setModalOpen(true);
@@ -134,6 +155,7 @@ export default function MasterItemsPage() {
     setStok(item.stok);
     setStokMinimum(item.stokMinimum);
     setStokBuffer(item.stokBuffer ?? 0);
+    setHarga(item.harga ?? 0);
     setBisaDitukar(item.bisaDitukar);
     setJenisKertas(item.jenisKertas || "A4");
     setModalOpen(true);
@@ -149,6 +171,7 @@ export default function MasterItemsPage() {
       stok: Number(stok),
       stokMinimum: Number(stokMinimum),
       stokBuffer: Number(stokBuffer),
+      harga: Number(harga),
       bisaDitukar,
       jenisKertas: kategori === "kertas" ? jenisKertas : null,
     };
@@ -200,12 +223,19 @@ export default function MasterItemsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Toast notifikasi hasil import (muncul setelah popup auto-tertutup) */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-[60] bg-emerald-700 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-lg max-w-xs animate-fade-in">
+          {toast}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
           <h1 className="text-xl font-extrabold text-slate-900">Master Data Barang Stationery</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Tambah, edit, dan atur ambang batas stok minimum untuk inventaris gudang PT JAI.
+            Tambah, edit, dan atur ambang batas stok minimum untuk inventaris stationery PT Jatim Autocomp Indonesia.
           </p>
         </div>
 
@@ -451,6 +481,20 @@ export default function MasterItemsPage() {
                   onChange={(e) => setStokMinimum(parseInt(e.target.value) || 0)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
                 />
+              </div>
+
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Harga Satuan (Rp)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={harga}
+                  onChange={(e) => setHarga(parseInt(e.target.value) || 0)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Dipakai untuk hitung nominal di halaman Laporan.</p>
               </div>
 
               <div className="col-span-2">

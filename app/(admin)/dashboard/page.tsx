@@ -85,9 +85,9 @@ export default function AdminDashboardPage() {
           <span className="inline-block px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-semibold text-amber-200 mb-2 border border-white/10">
             Modul Admin Stationery
           </span>
-          <h1 className="text-xl font-extrabold tracking-tight">Dashboard Gudang & Fulfillment ATK</h1>
+          <h1 className="text-xl font-extrabold tracking-tight">Dashboard Stationery</h1>
           <p className="text-xs text-amber-100/80 mt-1">
-            Proses dan serah terimakan pesanan barang stationery (Order Rutin langsung & Order Baru disetujui atasan).
+            Proses dan serah terimakan pesanan barang stationery berikut dibawah ini (Order Rutin langsung & Order Baru disetujui atasan).
           </p>
         </div>
 

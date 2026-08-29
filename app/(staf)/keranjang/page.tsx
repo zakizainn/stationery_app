@@ -138,7 +138,7 @@ export default function KeranjangPage() {
             href="/katalog"
             className="inline-block mt-4 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md transition-all"
           >
-            Buka Katalog Barang Now
+            Buka Katalog Barang
           </Link>
         </div>
       ) : (

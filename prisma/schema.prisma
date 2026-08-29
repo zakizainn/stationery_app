@@ -84,6 +84,7 @@ model Item {
   stok          Int          @default(0)
   stokBuffer    Int          @default(0) @map("stok_buffer") // "stok bayangan": disembunyikan dari staf, stok asli dikurangi ini saat ditampilkan
   stokMinimum   Int          @default(0) @map("stok_minimum")
+  harga         Int          @default(0) // harga satuan (Rupiah), dipakai untuk hitung nominal di laporan
   bisaDitukar   Boolean      @default(false) @map("bisa_ditukar")
   jenisKertas   String?      @map("jenis_kertas") // khusus kategori "kertas": A4/A3/A5/Others
 

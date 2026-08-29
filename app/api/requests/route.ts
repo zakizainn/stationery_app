@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const statusParam = searchParams.get("status");
+    const monthParam = searchParams.get("month"); // format "YYYY-MM"
 
     const whereCondition: Prisma.RequestWhereInput = {};
 
@@ -24,6 +25,16 @@ export async function GET(req: NextRequest) {
 
     if (statusParam) {
       whereCondition.status = statusParam as StatusRequest;
+    }
+
+    if (monthParam) {
+      const [year, month] = monthParam.split("-").map(Number);
+      if (year && month) {
+        whereCondition.tanggal = {
+          gte: new Date(year, month - 1, 1),
+          lt: new Date(year, month, 1),
+        };
+      }
     }
 
     const requests = await db.request.findMany({

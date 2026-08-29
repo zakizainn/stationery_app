@@ -34,6 +34,7 @@ export async function GET() {
     "SATUAN",
     "STOK_MASUK",
     "STOK_MINIMUM",
+    "HARGA",
     "JENIS_KERTAS",
     "BISA_DITUKAR",
   ];
@@ -54,17 +55,18 @@ export async function GET() {
           it.satuan,
           0, // STOK_MASUK sengaja dikosongkan (0) -- admin tinggal isi qty restock, bukan stok total
           it.stokMinimum,
+          it.harga,
           it.jenisKertas ?? "",
           it.bisaDitukar ? "Ya" : "Tidak",
         ])
       : [
-          ["Pulpen Hitam", "Barang Umum", "pcs", 20, 10, "", "Ya"],
-          ["Kertas HVS A4", "Kertas", "rim", 5, 5, "A4", "Tidak"],
-          ["Checksheet QC", "Checksheet", "lembar", 50, 20, "", "Tidak"],
+          ["Pulpen Hitam", "Barang Umum", "pcs", 20, 10, 3500, "", "Ya"],
+          ["Kertas HVS A4", "Kertas", "rim", 5, 5, 45000, "A4", "Tidak"],
+          ["Checksheet QC", "Checksheet", "lembar", 50, 20, 6000, "", "Tidak"],
         ];
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws["!cols"] = [{ wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+  ws["!cols"] = [{ wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 14 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, existingItems.length > 0 ? "Data Item" : "Import Item");
 
@@ -136,6 +138,7 @@ export async function POST(req: NextRequest) {
         }
         if (String(row["JENIS_KERTAS"] ?? "").trim()) updateData.jenisKertas = String(row["JENIS_KERTAS"]).trim();
         if (String(row["BISA_DITUKAR"] ?? "").trim()) updateData.bisaDitukar = normalizeBoolean(row["BISA_DITUKAR"]);
+        if (row["HARGA"] !== "" && row["HARGA"] != null) updateData.harga = Number(row["HARGA"]) || 0;
         if (stokMasuk > 0) updateData.stok = { increment: stokMasuk };
 
         await db.item.update({ where: { id: existing.id }, data: updateData });
@@ -160,6 +163,7 @@ export async function POST(req: NextRequest) {
             satuan,
             stok: stokMasuk,
             stokMinimum: Number(row["STOK_MINIMUM"]) || 0,
+            harga: Number(row["HARGA"]) || 0,
             jenisKertas: kategori === "kertas" ? String(row["JENIS_KERTAS"] ?? "").trim() || null : null,
             bisaDitukar: normalizeBoolean(row["BISA_DITUKAR"]),
           },

@@ -34,7 +34,7 @@ export default function BerandaPage() {
     selesai: { label: "Selesai / Diambil", style: "bg-purple-50 text-purple-700 border-purple-200" },
   };
 
-  // Order rutin tidak melalui approval siapa pun — status "approved" cuma
+  // Order rutin tidak melalui approval siapa pun -- status "approved" cuma
   // berarti "masuk antrian admin", bukan "disetujui atasan/superadmin".
   function getStatusBadge(r: { status: string; tipe: string }) {
     if (r.tipe === "rutin" && r.status === "approved") {
