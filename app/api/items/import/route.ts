@@ -143,9 +143,23 @@ export async function POST(req: NextRequest) {
 
         await db.item.update({ where: { id: existing.id }, data: updateData });
 
+        // Catat ke audit log kalau baris ini benar-benar mengubah harga item.
+        if (updateData.harga !== undefined && updateData.harga !== existing.harga) {
+          await db.hargaHistory.create({
+            data: {
+              itemId: existing.id,
+              hargaLama: existing.harga,
+              hargaBaru: updateData.harga as number,
+              diubahOlehId: parseInt(session.user.id),
+            },
+          });
+        }
+
         if (stokMasuk > 0) {
+          const hargaSnapshot =
+            row["HARGA"] !== "" && row["HARGA"] != null ? Number(row["HARGA"]) || 0 : existing.harga;
           await db.stockMovement.create({
-            data: { itemId: existing.id, tipe: "masuk", qty: stokMasuk },
+            data: { itemId: existing.id, tipe: "masuk", qty: stokMasuk, hargaSaatTransaksi: hargaSnapshot },
           });
           restocked++;
         }
@@ -156,18 +170,24 @@ export async function POST(req: NextRequest) {
           errors.push(`Baris ${rowNum} ("${nama}"): item baru wajib isi KATEGORI dan SATUAN yang valid.`);
           continue;
         }
-        await db.item.create({
+        const hargaBaru = Number(row["HARGA"]) || 0;
+        const newItem = await db.item.create({
           data: {
             nama,
             kategori,
             satuan,
             stok: stokMasuk,
             stokMinimum: Number(row["STOK_MINIMUM"]) || 0,
-            harga: Number(row["HARGA"]) || 0,
+            harga: hargaBaru,
             jenisKertas: kategori === "kertas" ? String(row["JENIS_KERTAS"] ?? "").trim() || null : null,
             bisaDitukar: normalizeBoolean(row["BISA_DITUKAR"]),
           },
         });
+        if (stokMasuk > 0) {
+          await db.stockMovement.create({
+            data: { itemId: newItem.id, tipe: "masuk", qty: stokMasuk, hargaSaatTransaksi: hargaBaru },
+          });
+        }
         created++;
       }
     }

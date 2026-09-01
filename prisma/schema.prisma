@@ -69,6 +69,7 @@ model User {
   requests        Request[]      @relation("Pemohon")
   approvals       Approval[]     @relation("Approver")
   notifications   Notification[]
+  hargaHistoryDiubah HargaHistory[]
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -91,11 +92,30 @@ model Item {
   requestItems     RequestItem[] @relation("ItemUtama")
   requestItemsLama RequestItem[] @relation("ItemLama")
   stockMovements   StockMovement[]
+  hargaHistory     HargaHistory[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("item")
+}
+
+// Audit log harga -- mencatat SETIAP kali admin mengubah harga item, terlepas
+// apakah ada transaksi stok (restock/order) yang menyertainya atau tidak.
+// Beda dengan stockMovement.hargaSaatTransaksi yang cuma "kebetulan ketahuan"
+// lewat transaksi, tabel ini adalah sumber kebenaran utama untuk "kapan
+// persis harga X berubah jadi Y".
+model HargaHistory {
+  id           Int      @id @default(autoincrement())
+  itemId       Int      @map("item_id")
+  item         Item     @relation(fields: [itemId], references: [id])
+  hargaLama    Int      @map("harga_lama")
+  hargaBaru    Int      @map("harga_baru")
+  diubahOlehId Int?     @map("diubah_oleh_id")
+  diubahOleh   User?    @relation(fields: [diubahOlehId], references: [id])
+  tanggal      DateTime @default(now())
+
+  @@map("harga_history")
 }
 
 model Request {
@@ -154,6 +174,7 @@ model StockMovement {
   item          Item              @relation(fields: [itemId], references: [id])
   tipe          TipeStockMovement
   qty           Int
+  hargaSaatTransaksi Int          @default(0) @map("harga_saat_transaksi") // snapshot harga item.harga saat transaksi dibuat -- supaya laporan bulan lalu tidak berubah kalau harga item diedit sekarang
   refRequestId  Int?              @map("ref_request_id")
   refRequest    Request?          @relation(fields: [refRequestId], references: [id])
   tanggal       DateTime          @default(now())

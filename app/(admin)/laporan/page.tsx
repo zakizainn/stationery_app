@@ -1,17 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
+
+interface HargaBreakdown {
+  harga: number;
+  qtyMasuk: number;
+  nominalMasuk: number;
+  qtyKeluar: number;
+  nominalKeluar: number;
+}
 
 interface PerItemRow {
   itemId: number;
   nama: string;
   kategori: string;
   satuan: string;
-  harga: number;
+  hargaMin: number;
+  hargaMax: number;
   qtyMasuk: number;
   nominalMasuk: number;
   qtyKeluar: number;
   nominalKeluar: number;
+  breakdown: HargaBreakdown[];
 }
 
 interface PerDeptRow {
@@ -40,6 +50,7 @@ export default function LaporanPage() {
   const [month, setMonth] = useState(currentMonthValue());
   const [data, setData] = useState<LaporanData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -138,18 +149,77 @@ export default function LaporanPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                     {data.perItem.map((it) => (
-                      <tr key={it.itemId} className="hover:bg-slate-50/80">
-                        <td className="py-3 px-4 font-bold text-slate-900">{it.nama}</td>
-                        <td className="py-3 px-4">{rupiah(it.harga)}</td>
-                        <td className="py-3 px-4 text-emerald-700">
-                          {it.qtyMasuk} {it.satuan}
-                        </td>
-                        <td className="py-3 px-4 text-emerald-700">{rupiah(it.nominalMasuk)}</td>
-                        <td className="py-3 px-4 text-rose-700">
-                          {it.qtyKeluar} {it.satuan}
-                        </td>
-                        <td className="py-3 px-4 text-rose-700">{rupiah(it.nominalKeluar)}</td>
-                      </tr>
+                      <Fragment key={it.itemId}>
+                        <tr className="hover:bg-slate-50/80">
+                          <td className="py-3 px-4 font-bold text-slate-900">{it.nama}</td>
+                          <td className="py-3 px-4">
+                            {it.hargaMin === it.hargaMax ? (
+                              rupiah(it.hargaMin)
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5">
+                                <span>
+                                  {rupiah(it.hargaMin)} – {rupiah(it.hargaMax)}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedItemId(expandedItemId === it.itemId ? null : it.itemId)}
+                                  title="Klik untuk lihat rincian tiap harga"
+                                  className="text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded cursor-pointer"
+                                >
+                                  Berubah {expandedItemId === it.itemId ? "▲" : "▼"}
+                                </button>
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-emerald-700">
+                            {it.qtyMasuk} {it.satuan}
+                          </td>
+                          <td className="py-3 px-4 text-emerald-700">{rupiah(it.nominalMasuk)}</td>
+                          <td className="py-3 px-4 text-rose-700">
+                            {it.qtyKeluar} {it.satuan}
+                          </td>
+                          <td className="py-3 px-4 text-rose-700">{rupiah(it.nominalKeluar)}</td>
+                        </tr>
+                        {expandedItemId === it.itemId && (
+                          <tr>
+                            <td colSpan={6} className="bg-amber-50/50 px-4 py-3">
+                              <p className="text-[11px] font-bold text-amber-900 uppercase tracking-wider mb-2">
+                                Rincian per harga — {it.nama}
+                              </p>
+                              <table className="w-full text-[11px]">
+                                <thead className="text-slate-400 font-bold uppercase">
+                                  <tr>
+                                    <th className="text-left py-1.5 px-2">Harga</th>
+                                    <th className="text-left py-1.5 px-2">Qty Masuk</th>
+                                    <th className="text-left py-1.5 px-2">Nominal Masuk</th>
+                                    <th className="text-left py-1.5 px-2">Qty Keluar</th>
+                                    <th className="text-left py-1.5 px-2">Nominal Keluar</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {it.breakdown.map((b) => (
+                                    <tr key={b.harga} className="border-t border-amber-100">
+                                      <td className="py-1.5 px-2 font-bold text-slate-800">{rupiah(b.harga)}</td>
+                                      <td className="py-1.5 px-2 text-emerald-700">
+                                        {b.qtyMasuk > 0 ? `${b.qtyMasuk} ${it.satuan}` : "-"}
+                                      </td>
+                                      <td className="py-1.5 px-2 text-emerald-700">
+                                        {b.qtyMasuk > 0 ? rupiah(b.nominalMasuk) : "-"}
+                                      </td>
+                                      <td className="py-1.5 px-2 text-rose-700">
+                                        {b.qtyKeluar > 0 ? `${b.qtyKeluar} ${it.satuan}` : "-"}
+                                      </td>
+                                      <td className="py-1.5 px-2 text-rose-700">
+                                        {b.qtyKeluar > 0 ? rupiah(b.nominalKeluar) : "-"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>

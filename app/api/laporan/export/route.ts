@@ -42,7 +42,11 @@ export async function GET(req: NextRequest) {
 
     const perItemMap = new Map<
       number,
-      { nama: string; kategori: string; satuan: string; harga: number; qtyMasuk: number; nominalMasuk: number; qtyKeluar: number; nominalKeluar: number }
+      { nama: string; kategori: string; satuan: string; hargaMin: number; hargaMax: number; qtyMasuk: number; nominalMasuk: number; qtyKeluar: number; nominalKeluar: number }
+    >();
+    const breakdownMap = new Map<
+      number,
+      Map<number, { harga: number; qtyMasuk: number; nominalMasuk: number; qtyKeluar: number; nominalKeluar: number }>
     >();
     const perDeptMap = new Map<string, { departemen: string; qtyKeluar: number; nominalKeluar: number }>();
     let totalNominalMasuk = 0;
@@ -51,13 +55,18 @@ export async function GET(req: NextRequest) {
     let totalQtyKeluar = 0;
 
     for (const mv of movements) {
-      const nominal = mv.qty * mv.item.harga;
+      // Pakai harga snapshot saat transaksi (bukan mv.item.harga yang bisa berubah
+      // kalau admin edit harga item sekarang) -- supaya laporan bulan lalu tidak
+      // ikut berubah gara-gara harga terbaru.
+      const hargaTransaksi = mv.hargaSaatTransaksi || mv.item.harga;
+      const nominal = mv.qty * hargaTransaksi;
       if (!perItemMap.has(mv.itemId)) {
         perItemMap.set(mv.itemId, {
           nama: mv.item.nama,
           kategori: mv.item.kategori,
           satuan: mv.item.satuan,
-          harga: mv.item.harga,
+          hargaMin: hargaTransaksi,
+          hargaMax: hargaTransaksi,
           qtyMasuk: 0,
           nominalMasuk: 0,
           qtyKeluar: 0,
@@ -65,15 +74,28 @@ export async function GET(req: NextRequest) {
         });
       }
       const row = perItemMap.get(mv.itemId)!;
+      row.hargaMin = Math.min(row.hargaMin, hargaTransaksi);
+      row.hargaMax = Math.max(row.hargaMax, hargaTransaksi);
+
+      if (!breakdownMap.has(mv.itemId)) breakdownMap.set(mv.itemId, new Map());
+      const itemBreakdown = breakdownMap.get(mv.itemId)!;
+      if (!itemBreakdown.has(hargaTransaksi)) {
+        itemBreakdown.set(hargaTransaksi, { harga: hargaTransaksi, qtyMasuk: 0, nominalMasuk: 0, qtyKeluar: 0, nominalKeluar: 0 });
+      }
+      const priceRow = itemBreakdown.get(hargaTransaksi)!;
 
       if (mv.tipe === "masuk") {
         row.qtyMasuk += mv.qty;
         row.nominalMasuk += nominal;
+        priceRow.qtyMasuk += mv.qty;
+        priceRow.nominalMasuk += nominal;
         totalQtyMasuk += mv.qty;
         totalNominalMasuk += nominal;
       } else {
         row.qtyKeluar += mv.qty;
         row.nominalKeluar += nominal;
+        priceRow.qtyKeluar += mv.qty;
+        priceRow.nominalKeluar += nominal;
         totalQtyKeluar += mv.qty;
         totalNominalKeluar += nominal;
 
@@ -87,7 +109,13 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const perItem = Array.from(perItemMap.values()).sort((a, b) => b.nominalKeluar - a.nominalKeluar);
+    const perItem = Array.from(perItemMap.entries())
+      .map(([itemId, it]) => ({
+        itemId,
+        ...it,
+        breakdown: Array.from(breakdownMap.get(itemId)?.values() ?? []).sort((a, b) => a.harga - b.harga),
+      }))
+      .sort((a, b) => b.nominalKeluar - a.nominalKeluar);
     const perDepartemen = Array.from(perDeptMap.values()).sort((a, b) => b.nominalKeluar - a.nominalKeluar);
 
     // --- Susun workbook Excel, 3 sheet ---
@@ -115,14 +143,14 @@ export async function GET(req: NextRequest) {
       it.nama,
       KATEGORI_LABEL[it.kategori] ?? it.kategori,
       it.satuan,
-      it.harga,
+      it.hargaMin === it.hargaMax ? it.hargaMin : `Rp ${it.hargaMin.toLocaleString("id-ID")} - Rp ${it.hargaMax.toLocaleString("id-ID")} (berubah)`,
       it.qtyMasuk,
       it.nominalMasuk,
       it.qtyKeluar,
       it.nominalKeluar,
     ]);
     const wsPerItem = XLSX.utils.aoa_to_sheet([perItemHeaders, ...perItemRows]);
-    wsPerItem["!cols"] = [{ wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 16 }];
+    wsPerItem["!cols"] = [{ wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 24 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, wsPerItem, "Per Barang");
 
     // Sheet 3: Per Departemen
@@ -131,6 +159,19 @@ export async function GET(req: NextRequest) {
     const wsPerDept = XLSX.utils.aoa_to_sheet([perDeptHeaders, ...perDeptRows]);
     wsPerDept["!cols"] = [{ wch: 24 }, { wch: 18 }, { wch: 18 }];
     XLSX.utils.book_append_sheet(wb, wsPerDept, "Per Departemen");
+
+    // Sheet 4: Rincian per Harga -- hanya barang yang harganya berubah dalam periode ini
+    const itemsWithPriceChange = perItem.filter((it) => it.hargaMin !== it.hargaMax);
+    const rincianHeaders = ["Nama Barang", "Harga", "Qty Masuk", "Nominal Masuk", "Qty Keluar", "Nominal Keluar"];
+    const rincianRows: (string | number)[][] = [];
+    for (const it of itemsWithPriceChange) {
+      for (const b of it.breakdown) {
+        rincianRows.push([it.nama, b.harga, b.qtyMasuk, b.nominalMasuk, b.qtyKeluar, b.nominalKeluar]);
+      }
+    }
+    const wsRincian = XLSX.utils.aoa_to_sheet([rincianHeaders, ...rincianRows]);
+    wsRincian["!cols"] = [{ wch: 28 }, { wch: 14 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, wsRincian, "Rincian per Harga");
 
     const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
     const filename = `laporan-stationery-${year}-${String(month).padStart(2, "0")}.xlsx`;

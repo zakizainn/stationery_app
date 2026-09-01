@@ -38,6 +38,13 @@ export default function MasterItemsPage() {
   }, [toast]);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
 
+  // Riwayat harga (audit log)
+  const [hargaHistoryItem, setHargaHistoryItem] = useState<Item | null>(null);
+  const [hargaHistory, setHargaHistory] = useState<
+    { id: number; hargaLama: number; hargaBaru: number; tanggal: string; diubahOleh: { nama: string } | null }[]
+  >([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   // Search & pagination — 240+ item hasil impor Excel butuh ini biar tidak
   // perlu scroll panjang untuk cari & edit satu item.
   const [search, setSearch] = useState("");
@@ -145,6 +152,25 @@ export default function MasterItemsPage() {
     setBisaDitukar(false);
     setJenisKertas("A4");
     setModalOpen(true);
+  };
+
+  const openHargaHistory = async (item: Item) => {
+    setHargaHistoryItem(item);
+    setLoadingHistory(true);
+    try {
+      const res = await fetch(`/api/items/${item.id}/harga-history`);
+      const data = await res.json();
+      if (data.success) setHargaHistory(data.data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const closeHargaHistory = () => {
+    setHargaHistoryItem(null);
+    setHargaHistory([]);
   };
 
   const openEditModal = (item: Item) => {
@@ -325,6 +351,12 @@ export default function MasterItemsPage() {
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-right space-x-2">
+                      <button
+                        onClick={() => openHargaHistory(item)}
+                        className="text-xs font-bold text-amber-600 hover:text-amber-800 cursor-pointer"
+                      >
+                        Riwayat Harga
+                      </button>
                       <button
                         onClick={() => openEditModal(item)}
                         className="text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
@@ -616,6 +648,76 @@ export default function MasterItemsPage() {
                 {importing ? "Memproses..." : "Upload & Proses"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Riwayat Harga */}
+      {hargaHistoryItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-200 space-y-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h2 className="font-extrabold text-slate-900 text-base">Riwayat Harga</h2>
+                <p className="text-xs text-slate-500 mt-0.5">{hargaHistoryItem.nama}</p>
+              </div>
+              <button onClick={closeHargaHistory} className="text-slate-400 hover:text-slate-600 text-sm font-bold">
+                ✕
+              </button>
+            </div>
+
+            <p className="text-[11px] text-slate-400">
+              Mencatat setiap kali harga item ini diubah admin — terlepas apakah ada restock/order yang
+              menyertainya atau tidak.
+            </p>
+
+            {loadingHistory ? (
+              <div className="py-8 text-center text-xs text-slate-400">Memuat riwayat...</div>
+            ) : hargaHistory.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-500">
+                Belum ada perubahan harga tercatat untuk item ini.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {hargaHistory.map((h) => (
+                  <div key={h.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">
+                        Rp {h.hargaLama.toLocaleString("id-ID")}
+                        <span className="text-slate-400 mx-1.5">→</span>
+                        Rp {h.hargaBaru.toLocaleString("id-ID")}
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {new Date(h.tanggal).toLocaleString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                        {h.diubahOleh && ` · oleh ${h.diubahOleh.nama}`}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-xs font-bold px-2 py-1 rounded ${
+                        h.hargaBaru > h.hargaLama
+                          ? "bg-rose-50 text-rose-700"
+                          : "bg-emerald-50 text-emerald-700"
+                      }`}
+                    >
+                      {h.hargaBaru > h.hargaLama ? "▲ Naik" : "▼ Turun"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              onClick={closeHargaHistory}
+              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer"
+            >
+              Tutup
+            </button>
           </div>
         </div>
       )}

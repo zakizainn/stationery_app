@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
           itemId: Number(itemId),
           tipe: "masuk",
           qty: Number(qty),
+          hargaSaatTransaksi: item.harga,
         },
       });
     });

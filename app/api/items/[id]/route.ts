@@ -22,6 +22,12 @@ export async function PATCH(
     const body = await req.json();
     const { nama, kategori, satuan, stok, stokMinimum, stokBuffer, harga, bisaDitukar, jenisKertas, fotoUrl } = body;
 
+    // Ambil harga lama dulu sebelum diupdate -- perlu buat catat audit log kalau berubah.
+    const existingItem = await db.item.findUnique({ where: { id: itemId }, select: { harga: true } });
+    if (!existingItem) {
+      return NextResponse.json({ success: false, error: "Item tidak ditemukan" }, { status: 404 });
+    }
+
     const updatedItem = await db.item.update({
       where: { id: itemId },
       data: {
@@ -37,6 +43,19 @@ export async function PATCH(
         fotoUrl: fotoUrl !== undefined ? fotoUrl : undefined,
       },
     });
+
+    // Catat ke audit log KALAU harga benar-benar berubah -- ini sumber kebenaran
+    // utama untuk "kapan persis harga berubah", terlepas ada transaksi atau tidak.
+    if (harga !== undefined && Number(harga) !== existingItem.harga) {
+      await db.hargaHistory.create({
+        data: {
+          itemId,
+          hargaLama: existingItem.harga,
+          hargaBaru: Number(harga),
+          diubahOlehId: parseInt(session.user.id),
+        },
+      });
+    }
 
     return NextResponse.json({ success: true, data: updatedItem });
   } catch (error: unknown) {
