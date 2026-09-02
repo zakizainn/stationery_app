@@ -350,25 +350,27 @@ export default function MasterItemsPage() {
                         <span className="text-slate-400">-</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-right space-x-2">
-                      <button
-                        onClick={() => openHargaHistory(item)}
-                        className="text-xs font-bold text-amber-600 hover:text-amber-800 cursor-pointer"
-                      >
-                        Riwayat Harga
-                      </button>
-                      <button
-                        onClick={() => openEditModal(item)}
-                        className="text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="text-xs font-bold text-rose-600 hover:text-rose-800 cursor-pointer"
-                      >
-                        Hapus
-                      </button>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => openHargaHistory(item)}
+                          className="text-[11px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap"
+                        >
+                          Riwayat Harga
+                        </button>
+                        <button
+                          onClick={() => openEditModal(item)}
+                          className="text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                        >
+                          Hapus
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

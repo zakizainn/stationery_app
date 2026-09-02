@@ -83,7 +83,7 @@ export default function AdminDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-amber-900 via-amber-800 to-slate-900 p-6 rounded-2xl text-white shadow-xl">
         <div>
           <span className="inline-block px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-semibold text-amber-200 mb-2 border border-white/10">
-            Modul Admin Stationery
+            Admin Stationery
           </span>
           <h1 className="text-xl font-extrabold tracking-tight">Dashboard Stationery</h1>
           <p className="text-xs text-amber-100/80 mt-1">
@@ -96,13 +96,13 @@ export default function AdminDashboardPage() {
             href="/items"
             className="bg-white text-amber-900 font-bold px-4 py-2 rounded-xl text-xs hover:bg-amber-50 transition-all"
           >
-            Kelola Master Barang
+            Kelola Barang
           </Link>
           <Link
             href="/restock"
             className="bg-amber-700/80 text-white font-bold px-4 py-2 rounded-xl text-xs hover:bg-amber-700 transition-all border border-amber-600"
           >
-            Restock Stok
+            Restock
           </Link>
         </div>
       </div>
