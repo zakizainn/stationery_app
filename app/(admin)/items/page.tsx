@@ -12,6 +12,7 @@ interface Item {
   stokMinimum: number;
   harga: number;
   bisaDitukar: boolean;
+  aktif: boolean;
   jenisKertas?: string;
   fotoUrl?: string;
 }
@@ -84,7 +85,9 @@ export default function MasterItemsPage() {
     setLoading(true);
     // Halaman ini paginate & search di sisi client (lihat filteredItems/pagedItems
     // di bawah), jadi butuh daftar lengkap -- bypass default limit API dengan all=1.
-    fetch("/api/items?all=1")
+    // includeInactive=1 supaya item yang dinonaktifkan (soft-delete) tetap kelihatan
+    // di sini untuk dikelola/diaktifkan lagi, walau disembunyikan dari katalog staf.
+    fetch("/api/items?all=1&includeInactive=1")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -231,16 +234,36 @@ export default function MasterItemsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus barang ini?")) return;
+    if (!confirm("Apakah Anda yakin ingin menghapus/menonaktifkan barang ini?")) return;
 
     try {
       const res = await fetch(`/api/items/${id}`, { method: "DELETE" });
       const data = await res.json();
 
       if (data.success) {
+        setToast(data.message);
         fetchItems();
       } else {
         alert(data.error || "Gagal menghapus item.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleReaktifkan = async (item: Item) => {
+    try {
+      const res = await fetch(`/api/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aktif: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setToast(`"${item.nama}" diaktifkan kembali.`);
+        fetchItems();
+      } else {
+        alert(data.error || "Gagal mengaktifkan item.");
       }
     } catch (e) {
       console.error(e);
@@ -325,9 +348,14 @@ export default function MasterItemsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                 {pagedItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-all">
+                  <tr key={item.id} className={`hover:bg-slate-50/80 transition-all ${!item.aktif ? "opacity-50 bg-slate-50/50" : ""}`}>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
                       {item.nama}
+                      {!item.aktif && (
+                        <span className="ml-2 text-[10px] text-slate-600 bg-slate-200 px-1.5 py-0.5 rounded border border-slate-300">
+                          Nonaktif
+                        </span>
+                      )}
                       {item.jenisKertas && (
                         <span className="ml-2 text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
                           {item.jenisKertas}
@@ -364,12 +392,21 @@ export default function MasterItemsPage() {
                         >
                           Edit
                         </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-                        >
-                          Hapus
-                        </button>
+                        {item.aktif ? (
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                          >
+                            Hapus
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleReaktifkan(item)}
+                            className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                          >
+                            Aktifkan
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

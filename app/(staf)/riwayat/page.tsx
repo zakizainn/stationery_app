@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { getStatusBadge } from "@/lib/status";
 
 export default function RiwayatPage() {
   const { data: session } = useSession();
@@ -53,24 +54,6 @@ export default function RiwayatPage() {
     if (filterStatus === "semua") return true;
     return r.status === filterStatus;
   });
-
-  const STATUS_BADGE: Record<string, { label: string; style: string }> = {
-    pending: { label: "Menunggu Approval", style: "bg-amber-50 text-amber-800 border-amber-200" },
-    approved: { label: "Disetujui", style: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-    rejected: { label: "Ditolak", style: "bg-rose-50 text-rose-800 border-rose-200" },
-    diproses: { label: "Sedang Diproses", style: "bg-blue-50 text-blue-800 border-blue-200" },
-    selesai: { label: "Selesai / Diambil", style: "bg-purple-50 text-purple-800 border-purple-200" },
-  };
-
-  // Order rutin tidak melalui approval siapa pun -- status "approved" di sini cuma
-  // berarti "masuk antrian admin", bukan "disetujui atasan/superadmin". Label
-  // khusus supaya tidak menyesatkan staf yang mengajukan order rutin.
-  function getStatusBadge(r: { status: string; tipe: string }) {
-    if (r.tipe === "rutin" && r.status === "approved") {
-      return { label: "Menunggu Diproses Admin", style: "bg-blue-50 text-blue-800 border-blue-200" };
-    }
-    return STATUS_BADGE[r.status] || { label: r.status, style: "bg-slate-100 text-slate-700" };
-  }
 
   return (
     <div className="space-y-6">
@@ -229,7 +212,16 @@ export default function RiwayatPage() {
                 </div>
                 <div>
                   <span className="text-slate-400 font-medium">Status</span>
-                  <p className="font-bold text-emerald-700 capitalize">{selectedReq.status}</p>
+                  <p className="mt-0.5">
+                    {(() => {
+                      const badge = getStatusBadge(selectedReq);
+                      return (
+                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${badge.style}`}>
+                          {badge.label}
+                        </span>
+                      );
+                    })()}
+                  </p>
                 </div>
               </div>
 

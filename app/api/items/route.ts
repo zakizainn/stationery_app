@@ -6,6 +6,7 @@ import { KategoriItem, Prisma } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("q") || "";
     const kategori = searchParams.get("kategori") as KategoriItem | null;
@@ -30,6 +31,15 @@ export async function GET(req: NextRequest) {
       whereCondition.kategori = kategori;
     }
 
+    // Item nonaktif (soft-deleted, punya riwayat transaksi) disembunyikan dari
+    // semua konsumen secara default -- katalog, dropdown restock/tukar, dst.
+    // Cuma Master Item yang boleh minta lihat semuanya lewat ?includeInactive=1.
+    const isAdminRole = session ? ["admin_stationery", "superadmin"].includes(session.user.role) : false;
+    const includeInactive = isAdminRole && searchParams.get("includeInactive") === "1";
+    if (!includeInactive) {
+      whereCondition.aktif = true;
+    }
+
     // Dropdown "tukar dengan barang lain" butuh daftar penuh, bukan satu batch
     // saja — bypass pagination lewat ?all=1 (tetap hormati filter q/kategori bila ada).
     const returnAll = searchParams.get("all") === "1";
@@ -47,8 +57,7 @@ export async function GET(req: NextRequest) {
     // restock & proses order akurat). Staf/atasan departemen lihat stok
     // asli dikurangi stokBuffer -- mencegah over-order & jadi safety stock,
     // tanpa mengubah data stok asli di database.
-    const session = await getServerSession(authOptions);
-    const seesRealStock = session ? ["admin_stationery", "superadmin"].includes(session.user.role) : false;
+    const seesRealStock = isAdminRole;
     const items = rawItems.map((it) =>
       seesRealStock ? it : { ...it, stok: Math.max(0, it.stok - it.stokBuffer) }
     );

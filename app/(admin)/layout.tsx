@@ -1,12 +1,12 @@
-import { AppShell } from "@/components/ui/AppShell";
+"use client";
 
-const nav = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/items", label: "Master Item" },
-  { href: "/restock", label: "Restock" },
-  { href: "/laporan", label: "Laporan" },
-];
+import { useSession } from "next-auth/react";
+import { AppShell } from "@/components/ui/AppShell";
+import { getNavForRole } from "@/lib/nav";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession();
+  const nav = getNavForRole(session?.user.role);
+
   return <AppShell nav={nav}>{children}</AppShell>;
 }

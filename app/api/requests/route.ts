@@ -75,6 +75,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    if (session.user.role === "atasan_departemen") {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Atasan Departemen tidak dapat mengajukan order sendiri. Silakan minta staf departemen Anda untuk mengajukan pengajuan ini.",
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const { tipe, catatan, items } = body;
 

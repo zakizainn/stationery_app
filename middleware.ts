@@ -7,7 +7,9 @@ import { BERANDA_PER_ROLE, Role } from "@/types";
 const ROUTE_ACCESS: Record<string, Role[]> = {
   "/beranda": ["staf", "atasan_departemen"],
   "/katalog": ["staf", "atasan_departemen"],
-  "/keranjang": ["staf", "atasan_departemen"],
+  // Hanya staf yang boleh mengajukan order. Atasan Departemen tidak bisa
+  // memesan/order barang sendiri — harus diwakili oleh staf departemennya.
+  "/keranjang": ["staf"],
   "/riwayat": ["staf", "atasan_departemen"],
   "/approval": ["atasan_departemen", "superadmin"],
   "/dashboard": ["admin_stationery"],

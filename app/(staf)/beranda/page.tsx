@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { getStatusBadge } from "@/lib/status";
 
 export default function BerandaPage() {
   const { data: session } = useSession();
@@ -25,23 +26,6 @@ export default function BerandaPage() {
   const pendingCount = requests.filter((r) => r.status === "pending").length;
   const approvedCount = requests.filter((r) => r.status === "approved" || r.status === "diproses").length;
   const selesaiCount = requests.filter((r) => r.status === "selesai").length;
-
-  const STATUS_BADGE: Record<string, { label: string; style: string }> = {
-    pending: { label: "Menunggu Approval", style: "bg-amber-50 text-amber-700 border-amber-200" },
-    approved: { label: "Disetujui", style: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-    rejected: { label: "Ditolak", style: "bg-rose-50 text-rose-700 border-rose-200" },
-    diproses: { label: "Sedang Diproses", style: "bg-blue-50 text-blue-700 border-blue-200" },
-    selesai: { label: "Selesai / Diambil", style: "bg-purple-50 text-purple-700 border-purple-200" },
-  };
-
-  // Order rutin tidak melalui approval siapa pun -- status "approved" cuma
-  // berarti "masuk antrian admin", bukan "disetujui atasan/superadmin".
-  function getStatusBadge(r: { status: string; tipe: string }) {
-    if (r.tipe === "rutin" && r.status === "approved") {
-      return { label: "Menunggu Diproses Admin", style: "bg-blue-50 text-blue-700 border-blue-200" };
-    }
-    return STATUS_BADGE[r.status] || { label: r.status, style: "bg-slate-100 text-slate-700" };
-  }
 
   return (
     <div className="space-y-6">
@@ -89,7 +73,7 @@ export default function BerandaPage() {
         <div className="bg-white p-5 rounded-2xl border border-amber-100 shadow-xs">
           <div className="text-xs font-bold text-amber-600 uppercase tracking-wider">Menunggu Approval</div>
           <div className="text-2xl font-black text-amber-700 mt-2">{loading ? "..." : pendingCount}</div>
-          <div className="text-[11px] text-amber-600/80 mt-1">Perlu atasan departemen</div>
+          <div className="text-[11px] text-amber-600/80 mt-1">Perlu approval atasan/superadmin</div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-emerald-100 shadow-xs">

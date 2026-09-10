@@ -9,6 +9,8 @@ export default function ApprovalPage() {
   const [loading, setLoading] = useState(true);
   const [rejectingReq, setRejectingReq] = useState<any | null>(null);
   const [catatanReject, setCatatanReject] = useState("");
+  const [approvingReq, setApprovingReq] = useState<any | null>(null);
+  const [submittingApprove, setSubmittingApprove] = useState(false);
 
   useEffect(() => {
     if (session?.user?.role) {
@@ -43,6 +45,7 @@ export default function ApprovalPage() {
 
   const handleAction = async (requestId: number, action: "approve" | "reject", catatan?: string) => {
     try {
+      if (action === "approve") setSubmittingApprove(true);
       const res = await fetch("/api/approval", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -53,12 +56,15 @@ export default function ApprovalPage() {
       if (data.success) {
         setRejectingReq(null);
         setCatatanReject("");
+        setApprovingReq(null);
         fetchPendingRequests();
       } else {
         alert(data.error || "Gagal memproses approval.");
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setSubmittingApprove(false);
     }
   };
 
@@ -172,7 +178,7 @@ export default function ApprovalPage() {
                 </button>
 
                 <button
-                  onClick={() => handleAction(req.id, "approve")}
+                  onClick={() => setApprovingReq(req)}
                   className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-md shadow-emerald-700/20 transition-all cursor-pointer"
                 >
                   Setujui Pengajuan ✓
@@ -217,6 +223,50 @@ export default function ApprovalPage() {
                 className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2.5 rounded-xl cursor-pointer shadow-md"
               >
                 Konfirmasi Penolakan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Approve Confirmation Modal */}
+      {approvingReq && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-200">
+            <h2 className="font-extrabold text-slate-900 text-base mb-1">
+              Setujui Pengajuan #{approvingReq.id}?
+            </h2>
+            <p className="text-xs text-slate-500 mb-4">
+              Anda akan menyetujui pengajuan dari {approvingReq.user?.nama} ({approvingReq.user?.nik}). Pastikan barang dan jumlahnya sudah sesuai — tindakan ini tidak bisa dibatalkan setelah disetujui.
+            </p>
+
+            <div className="divide-y divide-slate-100 border border-slate-200/80 rounded-xl overflow-hidden text-xs mb-4">
+              {approvingReq.items?.map((it: any) => (
+                <div
+                  key={it.id}
+                  className="p-3 bg-slate-50/50 flex items-center justify-between gap-2"
+                >
+                  <span className="font-bold text-slate-800">{it.item?.nama}</span>
+                  <span className="font-bold text-slate-900">
+                    {it.qtyDiajukan} {it.item?.satuan}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setApprovingReq(null)}
+                disabled={submittingApprove}
+                className="flex-1 bg-slate-100 text-slate-700 font-bold text-xs py-2.5 rounded-xl cursor-pointer disabled:opacity-60"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleAction(approvingReq.id, "approve")}
+                disabled={submittingApprove}
+                className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 rounded-xl cursor-pointer shadow-md disabled:opacity-60"
+              >
+                {submittingApprove ? "Memproses..." : "Ya, Setujui"}
               </button>
             </div>
           </div>

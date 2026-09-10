@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 
 interface Item {
   id: number;
@@ -16,10 +17,17 @@ interface Item {
 }
 
 export default function KatalogPage() {
+  const { data: session } = useSession();
+  // Atasan Departemen hanya meninjau katalog — tidak bisa mengajukan order
+  // sendiri, harus diwakili oleh staf departemennya.
+  const canOrder = session?.user.role !== "atasan_departemen";
+
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [selectedKategori, setSelectedKategori] = useState<string>("semua");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -28,6 +36,8 @@ export default function KatalogPage() {
   const [qty, setQty] = useState(1);
   const [penggunaan, setPenggunaan] = useState("");
   const [itemLamaId, setItemLamaId] = useState<string>("");
+
+  const PAGE_SIZE = 24;
 
   useEffect(() => {
     fetchItems();
@@ -48,9 +58,14 @@ export default function KatalogPage() {
     }
   };
 
-  const fetchItems = () => {
-    setLoading(true);
-    let url = "/api/items?";
+  // API /api/items dipaginasi (default 24 item per batch). append=true dipakai
+  // saat klik "Muat Lebih Banyak" agar hasil ditambahkan, bukan menimpa.
+  const fetchItems = (append = false) => {
+    const offset = append ? items.length : 0;
+    if (append) setLoadingMore(true);
+    else setLoading(true);
+
+    let url = `/api/items?limit=${PAGE_SIZE}&offset=${offset}&`;
     if (search) url += `q=${encodeURIComponent(search)}&`;
     if (selectedKategori !== "semua") url += `kategori=${selectedKategori}&`;
 
@@ -58,11 +73,15 @@ export default function KatalogPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setItems(data.data);
+          setItems((prev) => (append ? [...prev, ...data.data] : data.data));
+          setHasMore(Boolean(data.pagination?.hasMore));
         }
       })
       .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (append) setLoadingMore(false);
+        else setLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -142,25 +161,38 @@ export default function KatalogPage() {
         <div>
           <h1 className="text-xl font-extrabold text-slate-900">Katalog Barang Stationery</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Pilih kebutuhan ATK dan masukkan ke dalam keranjang pengajuan Anda.
+            {canOrder
+              ? "Pilih kebutuhan ATK dan masukkan ke dalam keranjang pengajuan Anda."
+              : "Anda hanya dapat melihat katalog. Pengajuan order dilakukan oleh staf departemen Anda."}
           </p>
         </div>
 
-        <Link
-          href="/keranjang"
-          className="relative inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl shadow-md transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
-          </svg>
-          Lihat Keranjang
-          {cartCount > 0 && (
-            <span className="ml-1 bg-white text-emerald-800 rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow-xs">
-              {cartCount}
-            </span>
-          )}
-        </Link>
+        {canOrder && (
+          <Link
+            href="/keranjang"
+            className="relative inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl shadow-md transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
+            </svg>
+            Lihat Keranjang
+            {cartCount > 0 && (
+              <span className="ml-1 bg-white text-emerald-800 rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow-xs">
+                {cartCount}
+              </span>
+            )}
+          </Link>
+        )}
       </div>
+
+      {!canOrder && (
+        <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-medium flex items-start gap-2">
+          <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Sebagai Atasan Departemen, Anda tidak dapat mengajukan order sendiri. Silakan minta staf departemen Anda untuk mengajukan kebutuhan ATK melalui menu Katalog &amp; Keranjang mereka.
+        </div>
+      )}
 
       {/* Search & Filter Section */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -261,24 +293,39 @@ export default function KatalogPage() {
 
                 <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-xs text-slate-400 font-medium">Satuan: {item.satuan}</span>
-                  <button
-                    onClick={() => {
-                      setActiveItem(item);
-                      setQty(1);
-                      setPenggunaan("");
-                      // Wajib tukar = tukar dengan barang yang sama (pulpen lama ->
-                      // pulpen baru), bukan pilih bebas barang lain.
-                      setItemLamaId(item.bisaDitukar ? String(item.id) : "");
-                    }}
-                    disabled={isOutOfStock}
-                    className="bg-slate-900 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    + Keranjang
-                  </button>
+                  {canOrder && (
+                    <button
+                      onClick={() => {
+                        setActiveItem(item);
+                        setQty(1);
+                        setPenggunaan("");
+                        // Wajib tukar = tukar dengan barang yang sama (pulpen lama ->
+                        // pulpen baru), bukan pilih bebas barang lain.
+                        setItemLamaId(item.bisaDitukar ? String(item.id) : "");
+                      }}
+                      disabled={isOutOfStock}
+                      className="bg-slate-900 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      + Keranjang
+                    </button>
+                  )}
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Load more (pagination) */}
+      {!loading && hasMore && (
+        <div className="flex justify-center pt-2">
+          <button
+            onClick={() => fetchItems(true)}
+            disabled={loadingMore}
+            className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 font-bold text-xs px-6 py-2.5 rounded-xl shadow-xs transition-all disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+          >
+            {loadingMore ? "Memuat..." : "Muat Lebih Banyak"}
+          </button>
         </div>
       )}
 
