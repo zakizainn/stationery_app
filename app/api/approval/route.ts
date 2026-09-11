@@ -39,8 +39,10 @@ export async function POST(req: NextRequest) {
     const level = session.user.role === "atasan_departemen" ? 1 : 2;
 
     // Cegah lompat urutan: superadmin (level 2) tidak boleh approve sebelum
-    // level 1 (atasan departemen) selesai approve.
-    if (level === 2) {
+    // level 1 (atasan departemen) selesai approve. Guard ini HANYA berlaku
+    // untuk "approve" -- superadmin tetap boleh menolak (reject) pengajuan
+    // kapan pun tanpa menunggu approval atasan departemen lebih dulu.
+    if (level === 2 && action === "approve") {
       const level1 = request.approvals.find((a) => a.level === 1);
       if (!level1 || level1.status !== "approved") {
         return NextResponse.json(

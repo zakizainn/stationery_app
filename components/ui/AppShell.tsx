@@ -3,6 +3,7 @@
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NotificationBell } from "./NotificationBell";
 
 const ROLE_LABEL: Record<string, string> = {
   staf: "Staf Departemen",
@@ -68,6 +69,8 @@ export function AppShell({
           </div>
 
           <div className="flex items-center gap-4">
+            {session && <NotificationBell />}
+
             {session && (
               <div className="flex items-center gap-3 bg-slate-50 border border-slate-200/80 rounded-full py-1 px-3">
                 <div className="text-right">

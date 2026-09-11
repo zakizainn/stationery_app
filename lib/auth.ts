@@ -33,6 +33,7 @@ export const authOptions: NextAuthOptions = {
           include: { departemen: true },
         });
         if (!user) return null;
+        if (!user.aktif) return null; // user dinonaktifkan (soft-deleted), tidak boleh login
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!valid) return null;

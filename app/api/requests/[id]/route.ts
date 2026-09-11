@@ -43,6 +43,24 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Pengajuan tidak ditemukan" }, { status: 404 });
     }
 
+    // Kepemilikan/departemen: staf hanya boleh lihat pengajuannya sendiri,
+    // atasan departemen hanya pengajuan departemennya. Tanpa ini siapa pun
+    // yang login bisa lihat detail pengajuan orang/departemen lain cuma
+    // dengan menebak ID di URL.
+    const role = session.user.role;
+    const isOwner = requestDetail.userId === parseInt(session.user.id);
+    const isSameDept = requestDetail.departemenId === session.user.departemenId;
+    const isPrivileged = role === "admin_stationery" || role === "superadmin";
+
+    if (!isPrivileged) {
+      if (role === "staf" && !isOwner) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
+      }
+      if (role === "atasan_departemen" && !isSameDept) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
+      }
+    }
+
     return NextResponse.json({ success: true, data: requestDetail });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to fetch request detail";

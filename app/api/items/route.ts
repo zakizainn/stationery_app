@@ -7,6 +7,10 @@ import { KategoriItem, Prisma } from "@prisma/client";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("q") || "";
     const kategori = searchParams.get("kategori") as KategoriItem | null;

@@ -235,7 +235,12 @@ export default function AdminDashboardPage() {
                             max={itemStok}
                             value={currentAdj.qtyDisetujui}
                             onChange={(e) => {
-                              const val = Math.max(0, parseInt(e.target.value) || 0);
+                              // Klem di client untuk UX (tombol Selesaikan bukan
+                              // <button type="submit"> di dalam <form>, jadi
+                              // atribut HTML `max` saja tidak mencegah input
+                              // lebih besar dari stok) -- validasi sesungguhnya
+                              // tetap dilakukan di server (POST /api/process).
+                              const val = Math.min(itemStok, Math.max(0, parseInt(e.target.value) || 0));
                               setItemAdjustments((prev) => ({
                                 ...prev,
                                 [it.id]: { ...prev[it.id], qtyDisetujui: val },

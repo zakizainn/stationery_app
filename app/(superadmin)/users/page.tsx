@@ -7,6 +7,7 @@ interface User {
   nik: string;
   nama: string;
   role: string;
+  aktif: boolean;
   departemenId: number;
   departemen?: { nama: string; kode: string };
 }
@@ -120,7 +121,7 @@ export default function UsersManagementPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus pengguna ini?")) return;
+    if (!confirm("Apakah Anda yakin ingin menonaktifkan pengguna ini? Akun tidak akan bisa login lagi.")) return;
 
     try {
       const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
@@ -129,7 +130,26 @@ export default function UsersManagementPage() {
       if (data.success) {
         fetchData();
       } else {
-        alert(data.error || "Gagal menghapus user.");
+        alert(data.error || "Gagal menonaktifkan user.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleReactivate = async (id: number) => {
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aktif: true }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        fetchData();
+      } else {
+        alert(data.error || "Gagal mengaktifkan kembali user.");
       }
     } catch (e) {
       console.error(e);
@@ -175,12 +195,13 @@ export default function UsersManagementPage() {
                   <th className="py-3.5 px-4">Nama Pengguna</th>
                   <th className="py-3.5 px-4">Role</th>
                   <th className="py-3.5 px-4">Departemen</th>
+                  <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                 {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/80">
+                  <tr key={u.id} className={`hover:bg-slate-50/80 ${!u.aktif ? "opacity-60" : ""}`}>
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{u.nik}</td>
                     <td className="py-3.5 px-4 font-bold text-slate-800">{u.nama}</td>
                     <td className="py-3.5 px-4">
@@ -189,13 +210,26 @@ export default function UsersManagementPage() {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-slate-600">{u.departemen?.nama} ({u.departemen?.kode})</td>
+                    <td className="py-3.5 px-4">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                        u.aktif ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-slate-100 text-slate-500 border-slate-200"
+                      }`}>
+                        {u.aktif ? "Aktif" : "Nonaktif"}
+                      </span>
+                    </td>
                     <td className="py-3.5 px-4 text-right space-x-2">
                       <button onClick={() => openEditModal(u)} className="text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer">
                         Edit
                       </button>
-                      <button onClick={() => handleDelete(u.id)} className="text-xs font-bold text-rose-600 hover:text-rose-800 cursor-pointer">
-                        Hapus
-                      </button>
+                      {u.aktif ? (
+                        <button onClick={() => handleDelete(u.id)} className="text-xs font-bold text-rose-600 hover:text-rose-800 cursor-pointer">
+                          Nonaktifkan
+                        </button>
+                      ) : (
+                        <button onClick={() => handleReactivate(u.id)} className="text-xs font-bold text-emerald-600 hover:text-emerald-800 cursor-pointer">
+                          Aktifkan
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

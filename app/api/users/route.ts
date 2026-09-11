@@ -18,6 +18,7 @@ export async function GET() {
         nik: true,
         nama: true,
         role: true,
+        aktif: true,
         departemenId: true,
         departemen: { select: { id: true, nama: true, kode: true } },
         createdAt: true,

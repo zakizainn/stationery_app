@@ -96,6 +96,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Tolak qty 0/negatif/non-angka di sini -- kalau lolos, qtyDiajukan negatif
+    // yang tidak dikoreksi admin akan membuat "stok: { decrement: qtyNegatif }"
+    // saat diproses justru MENAMBAH stok (celah manipulasi stok).
+    for (const item of items) {
+      const qty = Number(item.qty);
+      if (!item.itemId || !Number.isInteger(qty) || qty <= 0) {
+        return NextResponse.json(
+          { success: false, error: "Setiap item yang diajukan harus memiliki jumlah (qty) berupa bilangan bulat positif." },
+          { status: 400 }
+        );
+      }
+    }
+
     const isRutin = (tipe as TipeRequest) === "rutin" || !tipe;
     const initialStatus: StatusRequest = isRutin ? "approved" : "pending";
 

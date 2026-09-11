@@ -63,6 +63,7 @@ model User {
   nama          String
   passwordHash  String @map("password_hash")
   role          Role
+  aktif         Boolean @default(true) // soft-delete: user yg pernah mengajukan/menyetujui/memiliki riwayat tidak boleh dihapus permanen (FK ke Request/Approval), cuma dinonaktifkan & tidak bisa login lagi
   departemenId  Int    @map("departemen_id")
   departemen    Departemen @relation(fields: [departemenId], references: [id])
 

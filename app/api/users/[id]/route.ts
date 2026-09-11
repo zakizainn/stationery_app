@@ -19,7 +19,7 @@ export async function PATCH(
     const userId = parseInt(id);
 
     const body = await req.json();
-    const { nama, role, departemenId, newPassword } = body;
+    const { nama, role, departemenId, newPassword, aktif } = body;
 
     const updateData: Prisma.UserUpdateInput = {};
     if (nama) updateData.nama = nama;
@@ -27,6 +27,15 @@ export async function PATCH(
     if (departemenId) updateData.departemen = { connect: { id: Number(departemenId) } };
     if (newPassword && newPassword.trim() !== "") {
       updateData.passwordHash = await bcrypt.hash(newPassword, 10);
+    }
+    if (typeof aktif === "boolean") {
+      if (userId === parseInt(session.user.id) && !aktif) {
+        return NextResponse.json(
+          { success: false, error: "Anda tidak dapat menonaktifkan akun Anda sendiri." },
+          { status: 400 }
+        );
+      }
+      updateData.aktif = aktif;
     }
 
     const updatedUser = await db.user.update({
@@ -58,9 +67,34 @@ export async function DELETE(
     const { id } = await params;
     const userId = parseInt(id);
 
-    await db.user.delete({ where: { id: userId } });
+    if (userId === parseInt(session.user.id)) {
+      return NextResponse.json(
+        { success: false, error: "Anda tidak dapat menonaktifkan akun Anda sendiri." },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json({ success: true, message: "User berhasil dihapus." });
+    const target = await db.user.findUnique({ where: { id: userId } });
+    if (!target) {
+      return NextResponse.json({ success: false, error: "User tidak ditemukan" }, { status: 404 });
+    }
+
+    if (target.role === "superadmin" && target.aktif) {
+      const activeSuperadminCount = await db.user.count({ where: { role: "superadmin", aktif: true } });
+      if (activeSuperadminCount <= 1) {
+        return NextResponse.json(
+          { success: false, error: "Tidak dapat menonaktifkan superadmin aktif terakhir." },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Soft-delete: User punya relasi ke Request/Approval yang tidak boleh
+    // hilang (riwayat & laporan), jadi user cuma dinonaktifkan, bukan
+    // dihapus permanen dari database.
+    await db.user.update({ where: { id: userId }, data: { aktif: false } });
+
+    return NextResponse.json({ success: true, message: "User berhasil dinonaktifkan." });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to delete user";
     return NextResponse.json(

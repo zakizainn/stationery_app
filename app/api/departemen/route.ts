@@ -5,6 +5,11 @@ import { db } from "@/lib/db";
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const departemens = await db.departemen.findMany({
       include: {
         _count: { select: { users: true, requests: true } },
