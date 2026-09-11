@@ -20,6 +20,7 @@ enum KategoriItem {
   barang_umum
   kertas
   checksheet
+  catridge_toner_tinta
 }
 
 enum TipeRequest {

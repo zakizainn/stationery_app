@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getKategoriLabel } from "@/lib/kategori";
 
 interface CartItem {
   itemId: number;
@@ -167,7 +168,7 @@ export default function KeranjangPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                          {item.kategori.replace("_", " ")}
+                          {getKategoriLabel(item.kategori)}
                         </span>
                         {item.itemLamaId && (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">

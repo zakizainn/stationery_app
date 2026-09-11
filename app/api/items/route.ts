@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    if (kategori && ["barang_umum", "kertas", "checksheet"].includes(kategori)) {
+    if (kategori && ["barang_umum", "kertas", "checksheet", "catridge_toner_tinta"].includes(kategori)) {
       whereCondition.kategori = kategori;
     }
 

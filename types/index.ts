@@ -6,7 +6,7 @@ export type Role =
   | "superadmin"
   | "admin_stationery";
 
-export type KategoriItem = "barang_umum" | "kertas" | "checksheet";
+export type KategoriItem = "barang_umum" | "kertas" | "checksheet" | "catridge_toner_tinta";
 
 export type TipeRequest = "rutin" | "order_baru";
 

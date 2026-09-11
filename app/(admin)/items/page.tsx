@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getKategoriLabel } from "@/lib/kategori";
 
 interface Item {
   id: number;
@@ -319,9 +320,10 @@ export default function MasterItemsPage() {
           className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800"
         >
           <option value="semua">Semua kategori</option>
-          <option value="barang_umum">Barang Umum</option>
-          <option value="kertas">Kertas</option>
+          <option value="barang_umum">ATK</option>
+          <option value="kertas">Kertas & Lainnya</option>
           <option value="checksheet">Checksheet</option>
+          <option value="catridge_toner_tinta">Catridge/Toner/Tinta</option>
         </select>
       </div>
 
@@ -356,14 +358,9 @@ export default function MasterItemsPage() {
                           Nonaktif
                         </span>
                       )}
-                      {item.jenisKertas && (
-                        <span className="ml-2 text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                          {item.jenisKertas}
-                        </span>
-                      )}
                     </td>
                     <td className="py-3.5 px-4 uppercase text-[11px] font-bold text-slate-500">
-                      {item.kategori.replace("_", " ")}
+                      {getKategoriLabel(item.kategori)}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
                       {item.stok} {item.satuan}
@@ -488,9 +485,10 @@ export default function MasterItemsPage() {
                   onChange={(e) => setKategori(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800"
                 >
-                  <option value="barang_umum">Barang Umum</option>
-                  <option value="kertas">Kertas</option>
+                  <option value="barang_umum">ATK</option>
+                  <option value="kertas">Kertas & Lainnya</option>
                   <option value="checksheet">Checksheet</option>
+                  <option value="catridge_toner_tinta">Catridge/Toner/Tinta</option>
                 </select>
               </div>
 

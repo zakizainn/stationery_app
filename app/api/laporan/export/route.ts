@@ -7,9 +7,10 @@ import * as XLSX from "xlsx";
 const ALLOWED_ROLES = ["admin_stationery", "superadmin"];
 
 const KATEGORI_LABEL: Record<string, string> = {
-  barang_umum: "Barang Umum",
-  kertas: "Kertas",
+  barang_umum: "ATK",
+  kertas: "Kertas & Lainnya",
   checksheet: "Checksheet",
+  catridge_toner_tinta: "Catridge/Toner/Tinta",
 };
 
 export async function GET(req: NextRequest) {

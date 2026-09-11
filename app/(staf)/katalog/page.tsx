@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { getKategoriLabel } from "@/lib/kategori";
 
 interface Item {
   id: number;
@@ -212,9 +213,10 @@ export default function KatalogPage() {
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           {[
             { id: "semua", label: "Semua Barang" },
-            { id: "barang_umum", label: "Barang Umum" },
-            { id: "kertas", label: "Kertas" },
+            { id: "barang_umum", label: "ATK" },
+            { id: "kertas", label: "Kertas & Lainnya" },
             { id: "checksheet", label: "Checksheet" },
+            { id: "catridge_toner_tinta", label: "Catridge/Toner/Tinta" },
           ].map((cat) => (
             <button
               key={cat.id}
@@ -252,13 +254,8 @@ export default function KatalogPage() {
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
-                      {item.kategori.replace("_", " ")}
+                      {getKategoriLabel(item.kategori)}
                     </span>
-                    {item.jenisKertas && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-                        {item.jenisKertas}
-                      </span>
-                    )}
                   </div>
 
                   <h3 className="font-bold text-slate-900 text-sm leading-snug group-hover:text-emerald-700 transition-colors">
@@ -346,7 +343,7 @@ export default function KatalogPage() {
             <div className="space-y-4">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                  {activeItem.kategori.replace("_", " ")}
+                  {getKategoriLabel(activeItem.kategori)}
                 </span>
                 <h3 className="font-bold text-slate-900 text-base mt-1">{activeItem.nama}</h3>
                 <p className="text-xs text-slate-500 mt-0.5">

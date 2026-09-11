@@ -6,11 +6,13 @@ import * as XLSX from "xlsx";
 
 const ALLOWED_ROLES = ["admin_stationery", "superadmin"];
 
-function normalizeKategori(raw: unknown): "barang_umum" | "kertas" | "checksheet" | null {
+function normalizeKategori(raw: unknown): "barang_umum" | "kertas" | "checksheet" | "catridge_toner_tinta" | null {
   const s = String(raw ?? "").trim().toLowerCase().replace(/\s+/g, "_");
   if (["barang_umum", "atk", "umum"].includes(s)) return "barang_umum";
-  if (["kertas", "paper"].includes(s)) return "kertas";
+  if (["kertas", "paper", "paper_other", "paper_&_other"].includes(s)) return "kertas";
   if (["checksheet", "check_sheet"].includes(s)) return "checksheet";
+  if (["catridge_toner_tinta", "catridge", "toner", "tinta", "catridge#toner#tinta"].includes(s))
+    return "catridge_toner_tinta";
   return null;
 }
 
@@ -40,9 +42,10 @@ export async function GET() {
   ];
 
   const KATEGORI_LABEL: Record<string, string> = {
-    barang_umum: "Barang Umum",
-    kertas: "Kertas",
+    barang_umum: "ATK",
+    kertas: "Kertas & Lainnya",
     checksheet: "Checksheet",
+    catridge_toner_tinta: "Catridge/Toner/Tinta",
   };
 
   const existingItems = await db.item.findMany({ orderBy: { nama: "asc" } });
