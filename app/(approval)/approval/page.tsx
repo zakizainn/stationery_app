@@ -110,7 +110,7 @@ export default function ApprovalPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 font-extrabold flex items-center justify-center text-sm">
-                    #{req.id}
+                    #{req.noPengajuan}
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 text-sm">
@@ -194,7 +194,7 @@ export default function ApprovalPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-200">
             <h2 className="font-extrabold text-slate-900 text-base mb-1">
-              Tolak Pengajuan #{rejectingReq.id}
+              Tolak Pengajuan #{rejectingReq.noPengajuan}
             </h2>
             <p className="text-xs text-slate-500 mb-4">
               Masukkan alasan penolakan untuk diinformasikan kepada {rejectingReq.user?.nama}.
@@ -233,7 +233,7 @@ export default function ApprovalPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-200">
             <h2 className="font-extrabold text-slate-900 text-base mb-1">
-              Setujui Pengajuan #{approvingReq.id}?
+              Setujui Pengajuan #{approvingReq.noPengajuan}?
             </h2>
             <p className="text-xs text-slate-500 mb-4">
               Anda akan menyetujui pengajuan dari {approvingReq.user?.nama} ({approvingReq.user?.nik}). Pastikan barang dan jumlahnya sudah sesuai — tindakan ini tidak bisa dibatalkan setelah disetujui.

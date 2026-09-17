@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
         data: {
           userId: request.userId,
           requestId: request.id,
-          pesan: `Pengajuan stationery #${request.id} ${statusMessage}`,
+          pesan: `Pengajuan stationery #${request.noPengajuan} ${statusMessage}`,
         },
       });
     });

@@ -133,7 +133,7 @@ export default function AdminDashboardPage() {
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-slate-900 text-sm">Pesanan #{req.id}</span>
+                    <span className="font-extrabold text-slate-900 text-sm">Pesanan #{req.noPengajuan}</span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200 text-slate-700">
                       {req.tipe === "rutin" ? "Order Rutin" : "Order Baru"}
                     </span>
@@ -181,7 +181,7 @@ export default function AdminDashboardPage() {
           <div className="bg-white rounded-3xl p-6 w-full max-w-2xl shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <h2 className="font-extrabold text-slate-900 text-base">Pemrosesan Pesanan #{activeReq.id}</h2>
+                <h2 className="font-extrabold text-slate-900 text-base">Pemrosesan Pesanan #{activeReq.noPengajuan}</h2>
                 <span className="text-xs text-slate-500">
                   Pemohon: {activeReq.user?.nama} ({activeReq.departemen?.nama})
                 </span>

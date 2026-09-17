@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
           data: {
             userId: request.userId,
             requestId: request.id,
-            pesan: `Pengajuan stationery #${request.id} ditolak oleh ${session.user.name} (level ${level}).${
+            pesan: `Pengajuan stationery #${request.noPengajuan} ditolak oleh ${session.user.name} (level ${level}).${
               catatan ? ` Catatan: ${catatan}` : ""
             }`,
           },
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
             data: {
               userId: superadmin.id,
               requestId: request.id,
-              pesan: `Pengajuan #${request.id} dari ${request.user.nama} sudah disetujui atasan departemen — menunggu approval kamu.`,
+              pesan: `Pengajuan #${request.noPengajuan} dari ${request.user.nama} sudah disetujui atasan departemen — menunggu approval kamu.`,
             },
           });
         }
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
           data: {
             userId: request.userId,
             requestId: request.id,
-            pesan: `Pengajuan #${request.id} disetujui atasan departemen, menunggu approval superadmin.`,
+            pesan: `Pengajuan #${request.noPengajuan} disetujui atasan departemen, menunggu approval superadmin.`,
           },
         });
       } else {
@@ -115,14 +115,14 @@ export async function POST(req: NextRequest) {
           data: admins.map((a) => ({
             userId: a.id,
             requestId: request.id,
-            pesan: `Pengajuan #${request.id} dari ${request.user.nama} sudah lolos semua approval — siap diproses.`,
+            pesan: `Pengajuan #${request.noPengajuan} dari ${request.user.nama} sudah lolos semua approval — siap diproses.`,
           })),
         });
         await tx.notification.create({
           data: {
             userId: request.userId,
             requestId: request.id,
-            pesan: `Pengajuan #${request.id} disetujui superadmin — siap diproses admin stationery.`,
+            pesan: `Pengajuan #${request.noPengajuan} disetujui superadmin — siap diproses admin stationery.`,
           },
         });
       }

@@ -130,7 +130,7 @@ export default function BerandaPage() {
                   const badge = getStatusBadge(req);
                   return (
                     <tr key={req.id} className="hover:bg-slate-50/80 transition-all">
-                      <td className="py-3 px-2 font-bold text-slate-900">#{req.id}</td>
+                      <td className="py-3 px-2 font-bold text-slate-900">#{req.noPengajuan}</td>
                       <td className="py-3 px-2 text-slate-500">
                         {new Date(req.tanggal).toLocaleDateString("id-ID", {
                           day: "numeric",

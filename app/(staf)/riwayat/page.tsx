@@ -129,7 +129,7 @@ export default function RiwayatPage() {
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-3">
-                    <span className="font-extrabold text-slate-900 text-sm">#{req.id}</span>
+                    <span className="font-extrabold text-slate-900 text-sm">#{req.noPengajuan}</span>
                     <span className="text-xs font-medium text-slate-500">
                       {new Date(req.tanggal).toLocaleDateString("id-ID", {
                         weekday: "short",
@@ -182,7 +182,7 @@ export default function RiwayatPage() {
           <div className="bg-white rounded-3xl p-6 w-full max-w-xl shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <h2 className="font-extrabold text-slate-900 text-base">Detail Pengajuan #{selectedReq.id}</h2>
+                <h2 className="font-extrabold text-slate-900 text-base">Detail Pengajuan #{selectedReq.noPengajuan}</h2>
                 <span className="text-xs text-slate-400">Tipe: {selectedReq.tipe}</span>
               </div>
               <button

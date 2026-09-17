@@ -123,6 +123,7 @@ model HargaHistory {
 
 model Request {
   id           Int            @id @default(autoincrement())
+  noPengajuan  String         @unique @map("no_pengajuan") // format: 001/IX/2026 (urut/bulan romawi/tahun), reset tiap bulan
   userId       Int            @map("user_id")
   user         User           @relation("Pemohon", fields: [userId], references: [id])
   departemenId Int            @map("departemen_id")
@@ -138,6 +139,20 @@ model Request {
   notifications  Notification[]
 
   @@map("request")
+}
+
+// Penghitung nomor urut pengajuan per bulan/tahun, dipakai untuk membuat
+// noPengajuan (format 001/IX/2026). Di-upsert secara atomik saat pengajuan
+// baru dibuat supaya nomornya tidak pernah dobel walau ada 2 pengajuan
+// dibuat bersamaan.
+model RequestCounter {
+  id       Int @id @default(autoincrement())
+  bulan    Int // 1-12
+  tahun    Int
+  terakhir Int @default(0)
+
+  @@unique([bulan, tahun])
+  @@map("request_counter")
 }
 
 model RequestItem {

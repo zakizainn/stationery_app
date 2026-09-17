@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Prisma, StatusRequest, TipeRequest } from "@prisma/client";
+import { generateNoPengajuan } from "@/lib/noPengajuan";
 
 export async function GET(req: NextRequest) {
   try {
@@ -113,8 +114,11 @@ export async function POST(req: NextRequest) {
     const initialStatus: StatusRequest = isRutin ? "approved" : "pending";
 
     const newRequest = await db.$transaction(async (tx) => {
+      const noPengajuan = await generateNoPengajuan(tx);
+
       const createdRequest = await tx.request.create({
         data: {
+          noPengajuan,
           userId: parseInt(session.user.id),
           departemenId: session.user.departemenId,
           tipe: (tipe as TipeRequest) || "rutin",
@@ -146,7 +150,7 @@ export async function POST(req: NextRequest) {
             data: {
               userId: admin.id,
               requestId: createdRequest.id,
-              pesan: `Pengajuan order rutin baru #${createdRequest.id} dari ${session.user.name} (${session.user.nik}) langsung masuk antrean Admin Stationery.`,
+              pesan: `Pengajuan order rutin baru #${createdRequest.noPengajuan} dari ${session.user.name} (${session.user.nik}) langsung masuk antrean Admin Stationery.`,
             },
           });
         }
@@ -164,7 +168,7 @@ export async function POST(req: NextRequest) {
             data: {
               userId: atasan.id,
               requestId: createdRequest.id,
-              pesan: `Pengajuan order baru #${createdRequest.id} dari ${session.user.name} (${session.user.nik}) membutuhkan persetujuan.`,
+              pesan: `Pengajuan order baru #${createdRequest.noPengajuan} dari ${session.user.name} (${session.user.nik}) membutuhkan persetujuan.`,
             },
           });
         }
