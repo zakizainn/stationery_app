@@ -2,16 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getKategoriLabel } from "@/lib/kategori";
 import * as XLSX from "xlsx";
 
 const ALLOWED_ROLES = ["admin_stationery", "superadmin"];
-
-const KATEGORI_LABEL: Record<string, string> = {
-  barang_umum: "ATK",
-  kertas: "Kertas & Lainnya",
-  checksheet: "Checksheet",
-  catridge_toner_tinta: "Catridge/Toner/Tinta",
-};
 
 export async function GET(req: NextRequest) {
   try {
@@ -36,7 +30,12 @@ export async function GET(req: NextRequest) {
       where: { tanggal: { gte: start, lt: end } },
       include: {
         item: true,
-        refRequest: { include: { departemen: { select: { nama: true } } } },
+        refRequest: {
+          include: {
+            departemen: { select: { nama: true } },
+            user: { select: { nama: true } },
+          },
+        },
       },
       orderBy: { tanggal: "asc" },
     });
@@ -50,6 +49,10 @@ export async function GET(req: NextRequest) {
       Map<number, { harga: number; qtyMasuk: number; nominalMasuk: number; qtyKeluar: number; nominalKeluar: number }>
     >();
     const perDeptMap = new Map<string, { departemen: string; qtyKeluar: number; nominalKeluar: number }>();
+    const perKategoriMap = new Map<
+      string,
+      { kategori: string; label: string; qtyMasuk: number; nominalMasuk: number; qtyKeluar: number; nominalKeluar: number }
+    >();
     let totalNominalMasuk = 0;
     let totalNominalKeluar = 0;
     let totalQtyMasuk = 0;
@@ -85,11 +88,25 @@ export async function GET(req: NextRequest) {
       }
       const priceRow = itemBreakdown.get(hargaTransaksi)!;
 
+      if (!perKategoriMap.has(mv.item.kategori)) {
+        perKategoriMap.set(mv.item.kategori, {
+          kategori: mv.item.kategori,
+          label: getKategoriLabel(mv.item.kategori),
+          qtyMasuk: 0,
+          nominalMasuk: 0,
+          qtyKeluar: 0,
+          nominalKeluar: 0,
+        });
+      }
+      const kategoriRow = perKategoriMap.get(mv.item.kategori)!;
+
       if (mv.tipe === "masuk") {
         row.qtyMasuk += mv.qty;
         row.nominalMasuk += nominal;
         priceRow.qtyMasuk += mv.qty;
         priceRow.nominalMasuk += nominal;
+        kategoriRow.qtyMasuk += mv.qty;
+        kategoriRow.nominalMasuk += nominal;
         totalQtyMasuk += mv.qty;
         totalNominalMasuk += nominal;
       } else {
@@ -97,6 +114,8 @@ export async function GET(req: NextRequest) {
         row.nominalKeluar += nominal;
         priceRow.qtyKeluar += mv.qty;
         priceRow.nominalKeluar += nominal;
+        kategoriRow.qtyKeluar += mv.qty;
+        kategoriRow.nominalKeluar += nominal;
         totalQtyKeluar += mv.qty;
         totalNominalKeluar += nominal;
 
@@ -110,6 +129,25 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Detail transaksi mentah -- sama seperti /api/laporan, lihat file itu untuk komentar detail.
+    const detailTransaksi = movements
+      .map((mv) => {
+        const hargaTransaksi = mv.hargaSaatTransaksi || mv.item.harga;
+        return {
+          tanggal: mv.tanggal,
+          tipe: mv.tipe,
+          itemNama: mv.item.nama,
+          satuan: mv.item.satuan,
+          qty: mv.qty,
+          harga: hargaTransaksi,
+          nominal: mv.qty * hargaTransaksi,
+          noPengajuan: mv.refRequest?.noPengajuan ?? "-",
+          departemen: mv.refRequest?.departemen?.nama ?? "-",
+          pemohon: mv.refRequest?.user?.nama ?? "-",
+        };
+      })
+      .sort((a, b) => b.tanggal.getTime() - a.tanggal.getTime());
+
     const perItem = Array.from(perItemMap.entries())
       .map(([itemId, it]) => ({
         itemId,
@@ -118,8 +156,11 @@ export async function GET(req: NextRequest) {
       }))
       .sort((a, b) => b.nominalKeluar - a.nominalKeluar);
     const perDepartemen = Array.from(perDeptMap.values()).sort((a, b) => b.nominalKeluar - a.nominalKeluar);
+    const perKategori = Array.from(perKategoriMap.values()).sort(
+      (a, b) => b.nominalMasuk + b.nominalKeluar - (a.nominalMasuk + a.nominalKeluar)
+    );
 
-    // --- Susun workbook Excel, 3 sheet ---
+    // --- Susun workbook Excel, 6 sheet ---
     const wb = XLSX.utils.book_new();
 
     // Sheet 1: Ringkasan
@@ -138,11 +179,18 @@ export async function GET(req: NextRequest) {
     wsRingkasan["!cols"] = [{ wch: 32 }, { wch: 20 }];
     XLSX.utils.book_append_sheet(wb, wsRingkasan, "Ringkasan");
 
-    // Sheet 2: Per Barang
+    // Sheet 2: Per Kategori
+    const perKategoriHeaders = ["Kategori", "Qty Masuk", "Nominal Masuk", "Qty Keluar", "Nominal Keluar"];
+    const perKategoriRows = perKategori.map((k) => [k.label, k.qtyMasuk, k.nominalMasuk, k.qtyKeluar, k.nominalKeluar]);
+    const wsPerKategori = XLSX.utils.aoa_to_sheet([perKategoriHeaders, ...perKategoriRows]);
+    wsPerKategori["!cols"] = [{ wch: 24 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, wsPerKategori, "Per Kategori");
+
+    // Sheet 3: Per Barang
     const perItemHeaders = ["Nama Barang", "Kategori", "Satuan", "Harga Satuan", "Qty Masuk", "Nominal Masuk", "Qty Keluar", "Nominal Keluar"];
     const perItemRows = perItem.map((it) => [
       it.nama,
-      KATEGORI_LABEL[it.kategori] ?? it.kategori,
+      getKategoriLabel(it.kategori),
       it.satuan,
       it.hargaMin === it.hargaMax ? it.hargaMin : `Rp ${it.hargaMin.toLocaleString("id-ID")} - Rp ${it.hargaMax.toLocaleString("id-ID")} (berubah)`,
       it.qtyMasuk,
@@ -154,14 +202,14 @@ export async function GET(req: NextRequest) {
     wsPerItem["!cols"] = [{ wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 24 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, wsPerItem, "Per Barang");
 
-    // Sheet 3: Per Departemen
+    // Sheet 4: Per Departemen
     const perDeptHeaders = ["Departemen", "Total Qty Diambil", "Total Nominal"];
     const perDeptRows = perDepartemen.map((d) => [d.departemen, d.qtyKeluar, d.nominalKeluar]);
     const wsPerDept = XLSX.utils.aoa_to_sheet([perDeptHeaders, ...perDeptRows]);
     wsPerDept["!cols"] = [{ wch: 24 }, { wch: 18 }, { wch: 18 }];
     XLSX.utils.book_append_sheet(wb, wsPerDept, "Per Departemen");
 
-    // Sheet 4: Rincian per Harga -- hanya barang yang harganya berubah dalam periode ini
+    // Sheet 5: Rincian per Harga -- hanya barang yang harganya berubah dalam periode ini
     const itemsWithPriceChange = perItem.filter((it) => it.hargaMin !== it.hargaMax);
     const rincianHeaders = ["Nama Barang", "Harga", "Qty Masuk", "Nominal Masuk", "Qty Keluar", "Nominal Keluar"];
     const rincianRows: (string | number)[][] = [];
@@ -173,6 +221,36 @@ export async function GET(req: NextRequest) {
     const wsRincian = XLSX.utils.aoa_to_sheet([rincianHeaders, ...rincianRows]);
     wsRincian["!cols"] = [{ wch: 28 }, { wch: 14 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, wsRincian, "Rincian per Harga");
+
+    // Sheet 6: Detail Transaksi -- 1 baris per pergerakan stok, jadi laporan bisa
+    // ditelusuri sampai ke pengajuan & pemohon aslinya, bukan cuma angka rekap.
+    const detailHeaders = ["Tanggal", "Tipe", "Barang", "Qty", "Satuan", "Harga", "Nominal", "No. Pengajuan", "Departemen", "Pemohon"];
+    const detailRows = detailTransaksi.map((d) => [
+      d.tanggal.toLocaleDateString("id-ID"),
+      d.tipe === "masuk" ? "Masuk" : "Keluar",
+      d.itemNama,
+      d.qty,
+      d.satuan,
+      d.harga,
+      d.nominal,
+      d.noPengajuan,
+      d.departemen,
+      d.pemohon,
+    ]);
+    const wsDetail = XLSX.utils.aoa_to_sheet([detailHeaders, ...detailRows]);
+    wsDetail["!cols"] = [
+      { wch: 12 },
+      { wch: 8 },
+      { wch: 28 },
+      { wch: 8 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 20 },
+      { wch: 20 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsDetail, "Detail Transaksi");
 
     const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
     const filename = `laporan-stationery-${year}-${String(month).padStart(2, "0")}.xlsx`;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getKategoriLabel } from "@/lib/kategori";
 
 const ALLOWED_ROLES = ["admin_stationery", "superadmin"];
 
@@ -28,7 +29,10 @@ export async function GET(req: NextRequest) {
       include: {
         item: true,
         refRequest: {
-          include: { departemen: { select: { id: true, nama: true, kode: true } } },
+          include: {
+            departemen: { select: { id: true, nama: true, kode: true } },
+            user: { select: { nama: true } },
+          },
         },
       },
       orderBy: { tanggal: "asc" },
@@ -50,6 +54,14 @@ export async function GET(req: NextRequest) {
 
     // Rekap per departemen (hanya relevan untuk transaksi keluar, karena masuk/restock tidak terikat departemen)
     const perDeptMap = new Map<string, { departemen: string; qtyKeluar: number; nominalKeluar: number }>();
+
+    // Rekap per kategori item (ATK, Kertas, Checksheet, Catridge/Toner/Tinta) --
+    // level yang lebih ringkas dari per barang, biasanya ini yang paling dicari
+    // manajemen (mis. "berapa habis buat kertas bulan ini").
+    const perKategoriMap = new Map<
+      string,
+      { kategori: string; label: string; qtyMasuk: number; nominalMasuk: number; qtyKeluar: number; nominalKeluar: number }
+    >();
 
     let totalNominalMasuk = 0;
     let totalNominalKeluar = 0;
@@ -91,11 +103,25 @@ export async function GET(req: NextRequest) {
       }
       const priceRow = itemBreakdown.get(hargaTransaksi)!;
 
+      if (!perKategoriMap.has(mv.item.kategori)) {
+        perKategoriMap.set(mv.item.kategori, {
+          kategori: mv.item.kategori,
+          label: getKategoriLabel(mv.item.kategori),
+          qtyMasuk: 0,
+          nominalMasuk: 0,
+          qtyKeluar: 0,
+          nominalKeluar: 0,
+        });
+      }
+      const kategoriRow = perKategoriMap.get(mv.item.kategori)!;
+
       if (mv.tipe === "masuk") {
         row.qtyMasuk += mv.qty;
         row.nominalMasuk += nominal;
         priceRow.qtyMasuk += mv.qty;
         priceRow.nominalMasuk += nominal;
+        kategoriRow.qtyMasuk += mv.qty;
+        kategoriRow.nominalMasuk += nominal;
         totalQtyMasuk += mv.qty;
         totalNominalMasuk += nominal;
       } else {
@@ -103,6 +129,8 @@ export async function GET(req: NextRequest) {
         row.nominalKeluar += nominal;
         priceRow.qtyKeluar += mv.qty;
         priceRow.nominalKeluar += nominal;
+        kategoriRow.qtyKeluar += mv.qty;
+        kategoriRow.nominalKeluar += nominal;
         totalQtyKeluar += mv.qty;
         totalNominalKeluar += nominal;
 
@@ -116,6 +144,30 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Detail transaksi mentah -- 1 baris per StockMovement, supaya laporan bisa
+    // ditelusuri sampai ke pengajuan & pemohon aslinya (bukan cuma angka rekap).
+    // Transaksi "masuk" (restock) tidak terikat pengajuan/departemen/pemohon
+    // karena diinput langsung oleh admin stationery.
+    const detailTransaksi = movements
+      .map((mv) => {
+        const hargaTransaksi = mv.hargaSaatTransaksi || mv.item.harga;
+        return {
+          id: mv.id,
+          tanggal: mv.tanggal,
+          tipe: mv.tipe,
+          itemNama: mv.item.nama,
+          kategori: mv.item.kategori,
+          satuan: mv.item.satuan,
+          qty: mv.qty,
+          harga: hargaTransaksi,
+          nominal: mv.qty * hargaTransaksi,
+          noPengajuan: mv.refRequest?.noPengajuan ?? null,
+          departemen: mv.refRequest?.departemen?.nama ?? null,
+          pemohon: mv.refRequest?.user?.nama ?? null,
+        };
+      })
+      .sort((a, b) => b.tanggal.getTime() - a.tanggal.getTime()); // terbaru dulu
+
     const perItem = Array.from(perItemMap.values())
       .sort((a, b) => b.nominalKeluar - a.nominalKeluar)
       .map((it) => ({
@@ -123,6 +175,47 @@ export async function GET(req: NextRequest) {
         breakdown: Array.from(breakdownMap.get(it.itemId)?.values() ?? []).sort((a, b) => a.harga - b.harga),
       }));
     const perDepartemen = Array.from(perDeptMap.values()).sort((a, b) => b.nominalKeluar - a.nominalKeluar);
+    const perKategori = Array.from(perKategoriMap.values()).sort(
+      (a, b) => b.nominalMasuk + b.nominalKeluar - (a.nominalMasuk + a.nominalKeluar)
+    );
+
+    // Tren 6 bulan terakhir (termasuk bulan yang dipilih) -- dipakai buat grafik
+    // tren di dashboard visualisasi. Sengaja query terpisah dari `movements` di
+    // atas (yang scope-nya cuma 1 bulan) supaya query utama tetap ringan.
+    const TREND_MONTHS = 6;
+    const trendStart = new Date(year, month - 1 - (TREND_MONTHS - 1), 1);
+    const trendMovements = await db.stockMovement.findMany({
+      where: { tanggal: { gte: trendStart, lt: end } },
+      select: { tanggal: true, tipe: true, qty: true, hargaSaatTransaksi: true, item: { select: { harga: true } } },
+    });
+
+    const trenMap = new Map<
+      string,
+      { year: number; month: number; label: string; nominalMasuk: number; nominalKeluar: number }
+    >();
+    // Inisialisasi semua 6 bulan dengan 0 dulu -- supaya bulan tanpa transaksi
+    // tetap muncul di grafik (bukan bolong), bukan cuma bulan yang ada datanya.
+    for (let i = TREND_MONTHS - 1; i >= 0; i--) {
+      const d = new Date(year, month - 1 - i, 1);
+      const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
+      trenMap.set(key, {
+        year: d.getFullYear(),
+        month: d.getMonth() + 1,
+        label: d.toLocaleDateString("id-ID", { month: "short", year: "2-digit" }),
+        nominalMasuk: 0,
+        nominalKeluar: 0,
+      });
+    }
+    for (const mv of trendMovements) {
+      const key = `${mv.tanggal.getFullYear()}-${mv.tanggal.getMonth() + 1}`;
+      const row = trenMap.get(key);
+      if (!row) continue;
+      const hargaTransaksi = mv.hargaSaatTransaksi || mv.item.harga;
+      const nominal = mv.qty * hargaTransaksi;
+      if (mv.tipe === "masuk") row.nominalMasuk += nominal;
+      else row.nominalKeluar += nominal;
+    }
+    const tren = Array.from(trenMap.values());
 
     return NextResponse.json({
       success: true,
@@ -130,6 +223,9 @@ export async function GET(req: NextRequest) {
       summary: { totalNominalMasuk, totalNominalKeluar, totalQtyMasuk, totalQtyKeluar },
       perItem,
       perDepartemen,
+      perKategori,
+      detailTransaksi,
+      tren,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to generate laporan";

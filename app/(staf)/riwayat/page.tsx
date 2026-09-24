@@ -58,7 +58,7 @@ export default function RiwayatPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-md border border-slate-200/80 shadow-xs">
         <div>
           <h1 className="text-xl font-extrabold text-slate-900">Riwayat Pengajuan Stationery</h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -73,7 +73,7 @@ export default function RiwayatPage() {
               type="month"
               value={filterMonth}
               onChange={(e) => setFilterMonth(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700"
+              className="bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-xs font-semibold text-slate-700"
             />
             {filterMonth && (
               <button
@@ -98,7 +98,7 @@ export default function RiwayatPage() {
               <button
                 key={st.id}
                 onClick={() => setFilterStatus(st.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   filterStatus === st.id
                     ? "bg-slate-900 text-white shadow-xs"
                     : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60"
@@ -111,75 +111,77 @@ export default function RiwayatPage() {
         </div>
       </div>
 
-      {/* Request Table / List */}
+      {/* Request Table */}
       {loading ? (
         <div className="py-16 text-center text-xs text-slate-400">Memuat riwayat pengajuan...</div>
       ) : filteredRequests.length === 0 ? (
-        <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-slate-200">
+        <div className="py-16 text-center bg-white rounded-md border border-dashed border-slate-200">
           <p className="text-xs text-slate-500 font-medium">Tidak ada pengajuan dengan status ini.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filteredRequests.map((req) => {
-            const badge = getStatusBadge(req);
-            return (
-              <div
-                key={req.id}
-                className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-3">
-                    <span className="font-extrabold text-slate-900 text-sm">#{req.noPengajuan}</span>
-                    <span className="text-xs font-medium text-slate-500">
+        <div className="bg-white border border-slate-200 rounded-md overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-500">
+                <th className="py-2.5 px-4 font-bold">No. Pengajuan</th>
+                <th className="py-2.5 px-4 font-bold">Tanggal</th>
+                <th className="py-2.5 px-4 font-bold">Tipe</th>
+                <th className="py-2.5 px-4 font-bold">Barang</th>
+                <th className="py-2.5 px-4 font-bold">Status</th>
+                <th className="py-2.5 px-4 font-bold text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredRequests.map((req, idx) => {
+                const badge = getStatusBadge(req);
+                const items = req.items ?? [];
+                return (
+                  <tr key={req.id} className={idx % 2 === 1 ? "bg-slate-50/50" : ""}>
+                    <td className="py-3 px-4 font-bold text-slate-900 whitespace-nowrap">#{req.noPengajuan}</td>
+                    <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
                       {new Date(req.tanggal).toLocaleDateString("id-ID", {
-                        weekday: "short",
                         day: "numeric",
                         month: "short",
                         year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
                       })}
-                    </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-600">
-                      {req.tipe}
-                    </span>
-                  </div>
-
-                  <div className="text-xs text-slate-600">
-                    Pemohon: <strong>{req.user?.nama}</strong> ({req.departemen?.nama})
-                  </div>
-
-                  <div className="text-xs text-slate-500 flex flex-wrap gap-2 pt-1">
-                    {req.items?.map((it: any) => (
-                      <span key={it.id} className="bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded text-[11px]">
-                        {it.item?.nama} ({it.qtyDiajukan} {it.item?.satuan})
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-600">
+                        {req.tipe}
                       </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between sm:justify-end gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${badge.style}`}>
-                    {badge.label}
-                  </span>
-
-                  <button
-                    onClick={() => setSelectedReq(req)}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
-                  >
-                    Detail
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                    </td>
+                    <td className="py-3 px-4 text-slate-600 max-w-[240px]">
+                      {items.length === 0
+                        ? "-"
+                        : items.length === 1
+                        ? `${items[0].item?.nama} (${items[0].qtyDiajukan} ${items[0].item?.satuan})`
+                        : `${items[0].item?.nama} +${items.length - 1} lainnya`}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2.5 py-1 rounded text-[11px] font-bold border ${badge.style}`}>
+                        {badge.label}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        onClick={() => setSelectedReq(req)}
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3.5 py-1.5 rounded-md transition-all cursor-pointer"
+                      >
+                        Detail
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
       {/* Modal Detail Request */}
       {selectedReq && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-xl shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-xl shadow-sm border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
                 <h2 className="font-extrabold text-slate-900 text-base">Detail Pengajuan #{selectedReq.noPengajuan}</h2>
@@ -195,7 +197,7 @@ export default function RiwayatPage() {
 
             <div className="space-y-4">
               {/* Info summary */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 grid grid-cols-2 gap-3 text-xs">
+              <div className="bg-slate-50 p-4 rounded-md border border-slate-200/80 grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <span className="text-slate-400 font-medium">Pemohon</span>
                   <p className="font-bold text-slate-800">{selectedReq.user?.nama}</p>
@@ -226,7 +228,7 @@ export default function RiwayatPage() {
               </div>
 
               {selectedReq.catatan && (
-                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs">
+                <div className="p-3 bg-amber-50 rounded-md border border-amber-200 text-xs">
                   <span className="font-bold text-amber-900">Catatan Pemohon:</span>
                   <p className="text-amber-800 mt-0.5">{selectedReq.catatan}</p>
                 </div>
@@ -235,7 +237,7 @@ export default function RiwayatPage() {
               {/* Items Breakdown Table */}
               <div>
                 <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">Rincian Barang</h4>
-                <div className="border border-slate-200/80 rounded-xl overflow-hidden text-xs">
+                <div className="border border-slate-200/80 rounded-md overflow-hidden text-xs">
                   <table className="w-full text-left">
                     <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
                       <tr>
@@ -254,7 +256,7 @@ export default function RiwayatPage() {
                             )}
                           </td>
                           <td className="p-2.5 font-bold">{it.qtyDiajukan} {it.item?.satuan}</td>
-                          <td className="p-2.5 font-bold text-emerald-700">
+                          <td className="p-2.5 font-bold text-brand-700">
                             {it.qtyDisetujui !== null ? `${it.qtyDisetujui} ${it.item?.satuan}` : "-"}
                           </td>
                         </tr>
@@ -270,10 +272,10 @@ export default function RiwayatPage() {
                   <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">Riwayat Approval</h4>
                   <div className="space-y-2">
                     {selectedReq.approvals.map((app: any) => (
-                      <div key={app.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
+                      <div key={app.id} className="p-3 bg-slate-50 rounded-md border border-slate-200/80 text-xs">
                         <div className="flex justify-between font-bold text-slate-800">
                           <span>{app.approver?.nama} (Level {app.level})</span>
-                          <span className={app.status === "approved" ? "text-emerald-700" : "text-rose-700"}>
+                          <span className={app.status === "approved" ? "text-brand-700" : "text-rose-700"}>
                             {app.status.toUpperCase()}
                           </span>
                         </div>
@@ -291,7 +293,7 @@ export default function RiwayatPage() {
                 {selectedReq.status === "pending" && (
                   <button
                     onClick={() => handleCancelRequest(selectedReq.id)}
-                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
+                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-4 py-2 rounded-md transition-all cursor-pointer"
                   >
                     Batalkan Pengajuan Ini
                   </button>
@@ -299,7 +301,7 @@ export default function RiwayatPage() {
 
                 <button
                   onClick={() => setSelectedReq(null)}
-                  className="ml-auto bg-slate-900 text-white font-bold text-xs px-5 py-2 rounded-xl transition-all cursor-pointer"
+                  className="ml-auto bg-slate-900 text-white font-bold text-xs px-5 py-2 rounded-md transition-all cursor-pointer"
                 >
                   Tutup
                 </button>

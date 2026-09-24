@@ -108,7 +108,7 @@ export default function KeranjangPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-md border border-slate-200/80 shadow-xs">
         <div>
           <h1 className="text-xl font-extrabold text-slate-900">Keranjang Pengajuan</h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -118,14 +118,14 @@ export default function KeranjangPage() {
 
         <Link
           href="/katalog"
-          className="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl transition-all text-xs shrink-0 self-start sm:self-auto"
+          className="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-md transition-all text-xs shrink-0 self-start sm:self-auto"
         >
           ← Tambah Barang Lain
         </Link>
       </div>
 
       {cart.length === 0 ? (
-        <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-slate-200 p-8">
+        <div className="py-16 text-center bg-white rounded-md border border-dashed border-slate-200 p-8">
           <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
@@ -137,7 +137,7 @@ export default function KeranjangPage() {
           </p>
           <Link
             href="/katalog"
-            className="inline-block mt-4 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md transition-all"
+            className="inline-block mt-4 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-5 py-2.5 rounded-md shadow-sm transition-all"
           >
             Buka Katalog Barang
           </Link>
@@ -146,7 +146,7 @@ export default function KeranjangPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Cart items list */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="bg-white rounded-md border border-slate-200/80 shadow-xs overflow-hidden">
               <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
                   Daftar Barang ({cart.length} Item)
@@ -187,7 +187,7 @@ export default function KeranjangPage() {
 
                     <div className="flex items-center justify-between sm:justify-end gap-4">
                       {/* Quantity adjuster */}
-                      <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+                      <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-md">
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.itemId, -1)}
@@ -230,7 +230,7 @@ export default function KeranjangPage() {
 
           {/* Request Form & Summary */}
           <div className="space-y-4">
-            <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+            <form onSubmit={handleSubmit} className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
               <h3 className="font-extrabold text-slate-900 text-sm pb-3 border-b border-slate-100">
                 Detail Pengajuan
               </h3>
@@ -243,9 +243,9 @@ export default function KeranjangPage() {
                   <button
                     type="button"
                     onClick={() => setTipe("rutin")}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-3 rounded-md border text-left transition-all cursor-pointer ${
                       tipe === "rutin"
-                        ? "bg-emerald-50 border-emerald-500 text-emerald-900 font-bold"
+                        ? "bg-brand-50 border-brand-500 text-brand-900 font-bold"
                         : "bg-slate-50 border-slate-200 text-slate-600"
                     }`}
                   >
@@ -256,9 +256,9 @@ export default function KeranjangPage() {
                   <button
                     type="button"
                     onClick={() => setTipe("order_baru")}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-3 rounded-md border text-left transition-all cursor-pointer ${
                       tipe === "order_baru"
-                        ? "bg-emerald-50 border-emerald-500 text-emerald-900 font-bold"
+                        ? "bg-brand-50 border-brand-500 text-brand-900 font-bold"
                         : "bg-slate-50 border-slate-200 text-slate-600"
                     }`}
                   >
@@ -277,12 +277,12 @@ export default function KeranjangPage() {
                   value={catatan}
                   onChange={(e) => setCatatan(e.target.value)}
                   placeholder="Tambahkan catatan khusus untuk Atasan Departemen atau Admin..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md p-3 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
 
               {error && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+                <div className="p-3 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
                   {error}
                 </div>
               )}
@@ -290,7 +290,7 @@ export default function KeranjangPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-700/20 transition-all text-xs disabled:opacity-60 cursor-pointer"
+                className="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-md shadow-sm shadow-brand-700/20 transition-all text-xs disabled:opacity-60 cursor-pointer"
               >
                 {loading ? "Mengirim Pengajuan..." : "Kirim Pengajuan Sekarang"}
               </button>

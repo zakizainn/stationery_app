@@ -80,12 +80,12 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-amber-900 via-amber-800 to-slate-900 p-6 rounded-2xl text-white shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-amber-900 via-amber-800 to-slate-900 p-6 rounded-sm text-white">
         <div>
-          <span className="inline-block px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-semibold text-amber-200 mb-2 border border-white/10">
+          <span className="inline-block px-3 py-1 bg-white/10 rounded-sm text-xs font-semibold text-amber-200 mb-2 border border-white/20">
             Admin Stationery
           </span>
-          <h1 className="text-xl font-extrabold tracking-tight">Dashboard Stationery</h1>
+          <h1 className="text-xl font-bold tracking-tight">Dashboard Stationery</h1>
           <p className="text-xs text-amber-100/80 mt-1">
             Proses dan serah terimakan pesanan barang stationery berikut dibawah ini (Order Rutin langsung & Order Baru disetujui atasan).
           </p>
@@ -94,13 +94,13 @@ export default function AdminDashboardPage() {
         <div className="flex gap-2 shrink-0">
           <Link
             href="/items"
-            className="bg-white text-amber-900 font-bold px-4 py-2 rounded-xl text-xs hover:bg-amber-50 transition-all"
+            className="bg-white text-amber-900 font-bold px-4 py-2 rounded-md text-xs hover:bg-amber-50 transition-all"
           >
             Kelola Barang
           </Link>
           <Link
             href="/restock"
-            className="bg-amber-700/80 text-white font-bold px-4 py-2 rounded-xl text-xs hover:bg-amber-700 transition-all border border-amber-600"
+            className="bg-amber-700/80 text-white font-bold px-4 py-2 rounded-md text-xs hover:bg-amber-700 transition-all border border-amber-600"
           >
             Restock
           </Link>
@@ -108,11 +108,11 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Queue Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
+      <div className="bg-white rounded-sm border border-slate-300 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-slate-900">Antrean Pesanan Disetujui</h2>
-            <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 font-bold text-xs">
+            <span className="px-2.5 py-0.5 rounded-sm bg-blue-100 text-blue-900 font-bold text-xs border border-blue-200">
               {requests.length} Pesanan
             </span>
           </div>
@@ -121,7 +121,7 @@ export default function AdminDashboardPage() {
         {loading ? (
           <div className="py-12 text-center text-xs text-slate-400">Memuat antrean pesanan...</div>
         ) : requests.length === 0 ? (
-          <div className="py-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+          <div className="py-12 text-center bg-slate-50 rounded-sm border border-dashed border-slate-300">
             <p className="text-xs text-slate-500 font-medium">Tidak ada pengajuan yang membutuhkan pemrosesan saat ini.</p>
           </div>
         ) : (
@@ -129,18 +129,18 @@ export default function AdminDashboardPage() {
             {requests.map((req) => (
               <div
                 key={req.id}
-                className="p-5 rounded-2xl border border-slate-200/80 hover:border-slate-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50"
+                className="p-5 rounded-sm border border-slate-300 border-l-[3px] border-l-blue-500 hover:bg-slate-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-slate-900 text-sm">Pesanan #{req.noPengajuan}</span>
+                    <span className="font-bold text-slate-900 text-sm">Pesanan #{req.noPengajuan}</span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200 text-slate-700">
                       {req.tipe === "rutin" ? "Order Rutin" : "Order Baru"}
                     </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                    <span className={`px-2.5 py-0.5 rounded-sm text-[10px] font-bold border ${
                       req.status === "diproses"
                         ? "bg-blue-50 text-blue-800 border-blue-200"
-                        : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                        : "bg-brand-50 text-brand-800 border-brand-200"
                     }`}>
                       {req.status === "diproses"
                         ? "Sedang Diproses"
@@ -165,7 +165,7 @@ export default function AdminDashboardPage() {
 
                 <button
                   onClick={() => openProcessModal(req)}
-                  className="bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md transition-all cursor-pointer shrink-0"
+                  className="bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs px-4 py-2 rounded-sm transition-all cursor-pointer shrink-0"
                 >
                   Proses & Penyesuaian Qty →
                 </button>
@@ -178,10 +178,10 @@ export default function AdminDashboardPage() {
       {/* Modal Counter Offer / Process */}
       {activeReq && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-2xl shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-sm p-6 w-full max-w-2xl border border-slate-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <h2 className="font-extrabold text-slate-900 text-base">Pemrosesan Pesanan #{activeReq.noPengajuan}</h2>
+                <h2 className="font-bold text-slate-900 text-base">Pemrosesan Pesanan #{activeReq.noPengajuan}</h2>
                 <span className="text-xs text-slate-500">
                   Pemohon: {activeReq.user?.nama} ({activeReq.departemen?.nama})
                 </span>
@@ -195,7 +195,7 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900">
+              <div className="p-3 bg-amber-50 rounded-sm border border-amber-300 text-xs text-amber-900">
                 💡 <strong>Fitur Penyesuaian Stok (Counter Offer):</strong> Anda dapat mengedit jumlah barang yang benar-benar disetujui untuk dikeluarkan bila stok gudang terbatas.
               </div>
 
@@ -206,7 +206,7 @@ export default function AdminDashboardPage() {
                   const itemStok = it.item?.stok || 0;
 
                   return (
-                    <div key={it.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
+                    <div key={it.id} className="p-4 bg-slate-50 rounded-sm border border-slate-300 space-y-3">
                       <div className="flex items-start justify-between">
                         <div>
                           <h4 className="font-bold text-slate-900 text-sm">{it.item?.nama}</h4>
@@ -246,7 +246,7 @@ export default function AdminDashboardPage() {
                                 [it.id]: { ...prev[it.id], qtyDisetujui: val },
                               }));
                             }}
-                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800"
+                            className="w-full bg-white border border-slate-200 rounded-md px-3 py-1.5 text-xs font-bold text-slate-800"
                           />
                         </div>
 
@@ -265,7 +265,7 @@ export default function AdminDashboardPage() {
                                 [it.id]: { ...prev[it.id], catatanAdmin: val },
                               }));
                             }}
-                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-800"
+                            className="w-full bg-white border border-slate-200 rounded-md px-3 py-1.5 text-xs font-medium text-slate-800"
                           />
                         </div>
                       </div>
@@ -278,13 +278,13 @@ export default function AdminDashboardPage() {
               <div className="pt-4 flex flex-col sm:flex-row gap-2 border-t border-slate-100">
                 <button
                   onClick={() => handleUpdateStatus("diproses")}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-md cursor-pointer"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-sm cursor-pointer"
                 >
                   Tandai &quot;Sedang Diproses&quot;
                 </button>
                 <button
                   onClick={() => handleUpdateStatus("selesai")}
-                  className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 rounded-xl shadow-md cursor-pointer"
+                  className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-sm cursor-pointer"
                 >
                   Selesaikan & Kurangi Stok Gudang ✓
                 </button>

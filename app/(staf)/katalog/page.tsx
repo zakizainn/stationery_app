@@ -149,8 +149,8 @@ export default function KatalogPage() {
     <div className="space-y-6">
       {/* Toast notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-3 animate-fade-in border border-slate-700">
-          <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-md shadow-sm text-xs font-bold flex items-center gap-3 animate-fade-in border border-slate-700">
+          <svg className="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
           </svg>
           {toastMessage}
@@ -158,7 +158,7 @@ export default function KatalogPage() {
       )}
 
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-md border border-slate-200/80 shadow-xs">
         <div>
           <h1 className="text-xl font-extrabold text-slate-900">Katalog Barang Stationery</h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -171,14 +171,14 @@ export default function KatalogPage() {
         {canOrder && (
           <Link
             href="/keranjang"
-            className="relative inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl shadow-md transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+            className="relative inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 rounded-md shadow-sm transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
             </svg>
             Lihat Keranjang
             {cartCount > 0 && (
-              <span className="ml-1 bg-white text-emerald-800 rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow-xs">
+              <span className="ml-1 bg-white text-brand-800 rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow-xs">
                 {cartCount}
               </span>
             )}
@@ -187,7 +187,7 @@ export default function KatalogPage() {
       </div>
 
       {!canOrder && (
-        <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-medium flex items-start gap-2">
+        <div className="p-4 rounded-md bg-blue-50 border border-blue-200 text-blue-800 text-xs font-medium flex items-start gap-2">
           <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -203,7 +203,7 @@ export default function KatalogPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari nama barang... (misal: Pulpen, Kertas HVS)"
-            className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-2.5 pl-10 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+            className="w-full bg-white border border-slate-200/80 rounded-md px-4 py-2.5 pl-10 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-xs"
           />
           <svg className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -221,9 +221,9 @@ export default function KatalogPage() {
             <button
               key={cat.id}
               onClick={() => setSelectedKategori(cat.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedKategori === cat.id
-                  ? "bg-emerald-700 text-white shadow-xs"
+                  ? "bg-brand-700 text-white shadow-xs"
                   : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50"
               }`}
             >
@@ -237,7 +237,7 @@ export default function KatalogPage() {
       {loading ? (
         <div className="py-16 text-center text-xs text-slate-400">Memuat data barang...</div>
       ) : items.length === 0 ? (
-        <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-slate-200">
+        <div className="py-16 text-center bg-white rounded-md border border-dashed border-slate-200">
           <p className="text-xs text-slate-500 font-medium">Tidak ada barang yang sesuai pencarian atau filter.</p>
         </div>
       ) : (
@@ -249,7 +249,7 @@ export default function KatalogPage() {
             return (
               <div
                 key={item.id}
-                className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                className="bg-white rounded-md border border-slate-200/80 p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between group"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-3">
@@ -258,7 +258,7 @@ export default function KatalogPage() {
                     </span>
                   </div>
 
-                  <h3 className="font-bold text-slate-900 text-sm leading-snug group-hover:text-emerald-700 transition-colors">
+                  <h3 className="font-bold text-slate-900 text-sm leading-snug group-hover:text-brand-700 transition-colors">
                     {item.nama}
                   </h3>
 
@@ -272,7 +272,7 @@ export default function KatalogPage() {
                         Stok Menipis ({item.stok} {item.satuan})
                       </span>
                     ) : (
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                      <span className="px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200 text-[10px] font-bold">
                         Tersedia ({item.stok} {item.satuan})
                       </span>
                     )}
@@ -301,7 +301,7 @@ export default function KatalogPage() {
                         setItemLamaId(item.bisaDitukar ? String(item.id) : "");
                       }}
                       disabled={isOutOfStock}
-                      className="bg-slate-900 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                      className="bg-slate-900 hover:bg-brand-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-md transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                     >
                       + Keranjang
                     </button>
@@ -319,7 +319,7 @@ export default function KatalogPage() {
           <button
             onClick={() => fetchItems(true)}
             disabled={loadingMore}
-            className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 font-bold text-xs px-6 py-2.5 rounded-xl shadow-xs transition-all disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+            className="bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 font-bold text-xs px-6 py-2.5 rounded-md shadow-xs transition-all disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
           >
             {loadingMore ? "Memuat..." : "Muat Lebih Banyak"}
           </button>
@@ -329,7 +329,7 @@ export default function KatalogPage() {
       {/* Modal Add to Cart */}
       {activeItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-200">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-sm border border-slate-200">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <h2 className="font-extrabold text-slate-900 text-base">Tambah ke Keranjang</h2>
               <button
@@ -359,7 +359,7 @@ export default function KatalogPage() {
                   <button
                     type="button"
                     onClick={() => setQty((q) => Math.max(1, q - 1))}
-                    className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center cursor-pointer"
+                    className="w-9 h-9 rounded-md bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center cursor-pointer"
                   >
                     -
                   </button>
@@ -369,12 +369,12 @@ export default function KatalogPage() {
                     max={activeItem.stok}
                     value={qty}
                     onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-20 text-center bg-slate-50 border border-slate-200 rounded-xl py-1.5 font-bold text-sm text-slate-800"
+                    className="w-20 text-center bg-slate-50 border border-slate-200 rounded-md py-1.5 font-bold text-sm text-slate-800"
                   />
                   <button
                     type="button"
                     onClick={() => setQty((q) => Math.min(activeItem.stok, q + 1))}
-                    className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center cursor-pointer"
+                    className="w-9 h-9 rounded-md bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center cursor-pointer"
                   >
                     +
                   </button>
@@ -391,13 +391,13 @@ export default function KatalogPage() {
                     value={penggunaan}
                     onChange={(e) => setPenggunaan(e.target.value)}
                     placeholder="Contoh: Cetak laporan audit bulanan QA"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
               )}
 
               {activeItem.bisaDitukar && (
-                <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
+                <div className="p-3 bg-purple-50 rounded-md border border-purple-200">
                   <label className="block text-xs font-bold text-purple-900 uppercase tracking-wider mb-1">
                     Penukaran Barang Lama (Wajib)
                   </label>
@@ -412,14 +412,14 @@ export default function KatalogPage() {
                 <button
                   type="button"
                   onClick={() => setActiveItem(null)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer"
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-md transition-all cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 rounded-xl shadow-md transition-all cursor-pointer"
+                  className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md shadow-sm transition-all cursor-pointer"
                 >
                   Simpan ke Keranjang
                 </button>

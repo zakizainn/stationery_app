@@ -94,13 +94,13 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white rounded-2xl border border-slate-200 shadow-xl z-50 animate-fade-in">
+        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white rounded-md border border-slate-200 shadow-sm z-50 animate-fade-in">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 sticky top-0 bg-white">
             <span className="font-bold text-slate-900 text-xs">Notifikasi</span>
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 cursor-pointer"
+                className="text-[10px] font-bold text-brand-700 hover:text-brand-900 cursor-pointer"
               >
                 Tandai semua dibaca
               </button>
@@ -116,11 +116,11 @@ export function NotificationBell() {
                   key={n.id}
                   onClick={() => !n.dibaca && markAsRead(n.id)}
                   className={`w-full text-left px-4 py-3 text-xs transition-colors ${
-                    n.dibaca ? "text-slate-500" : "bg-emerald-50/60 text-slate-800 font-medium"
+                    n.dibaca ? "text-slate-500" : "bg-brand-50/60 text-slate-800 font-medium"
                   } hover:bg-slate-50`}
                 >
                   <div className="flex items-start gap-2">
-                    {!n.dibaca && <span className="mt-1 w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />}
+                    {!n.dibaca && <span className="mt-1 w-1.5 h-1.5 rounded-full bg-brand-600 shrink-0" />}
                     <div>
                       <p className="leading-snug">{n.pesan}</p>
                       <p className="text-[10px] text-slate-400 mt-1">

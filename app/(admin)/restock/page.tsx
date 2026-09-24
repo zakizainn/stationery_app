@@ -97,7 +97,7 @@ export default function RestockPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="bg-white p-6 rounded-md border border-slate-200/80 shadow-xs">
         <h1 className="text-xl font-extrabold text-slate-900">Restock & Pergerakan Stok (Stock Movement)</h1>
         <p className="text-xs text-slate-500 mt-1">
           Catat penambahan stok barang masuk dari supplier dan lihat riwayat pergerakan stok keluar/masuk.
@@ -107,13 +107,13 @@ export default function RestockPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Restock Form */}
         <div className="space-y-4">
-          <form onSubmit={handleRestockSubmit} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+          <form onSubmit={handleRestockSubmit} className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
             <h3 className="font-extrabold text-slate-900 text-sm pb-3 border-b border-slate-100">
               Form Restock (Barang Masuk)
             </h3>
 
             {msg && (
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+              <div className="p-3 rounded-md bg-brand-50 border border-brand-200 text-brand-800 text-xs font-bold">
                 ✓ {msg}
               </div>
             )}
@@ -135,11 +135,11 @@ export default function RestockPage() {
                   setItemSearch(e.target.value);
                   setSelectedItemId("");
                 }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-md p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
 
               {dropdownOpen && (
-                <div className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg">
+                <div className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-sm">
                   {filteredItems.length === 0 ? (
                     <div className="px-3 py-2.5 text-xs text-slate-400">Tidak ada barang yang cocok.</div>
                   ) : (
@@ -152,7 +152,7 @@ export default function RestockPage() {
                           setItemSearch("");
                           setDropdownOpen(false);
                         }}
-                        className="w-full text-left px-3 py-2.5 text-xs font-semibold text-slate-800 hover:bg-emerald-50 cursor-pointer border-b border-slate-50 last:border-0"
+                        className="w-full text-left px-3 py-2.5 text-xs font-semibold text-slate-800 hover:bg-brand-50 cursor-pointer border-b border-slate-50 last:border-0"
                       >
                         {i.nama}{" "}
                         <span className="text-slate-400 font-normal">
@@ -175,14 +175,14 @@ export default function RestockPage() {
                 required
                 value={qty}
                 onChange={(e) => setQty(parseInt(e.target.value) || 1)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-md p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
 
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs disabled:opacity-60 cursor-pointer"
+              className="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-md shadow-sm transition-all text-xs disabled:opacity-60 cursor-pointer"
             >
               {submitting ? "Menyimpan Restock..." : "Tambah Stok Barang"}
             </button>
@@ -190,7 +190,7 @@ export default function RestockPage() {
         </div>
 
         {/* Movements History */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+        <div className="lg:col-span-2 bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
           <h3 className="font-extrabold text-slate-900 text-sm pb-3 border-b border-slate-100">
             Riwayat Transaksi Stok (Log Movement)
           </h3>
@@ -225,7 +225,7 @@ export default function RestockPage() {
                       <td className="py-3 px-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                           m.tipe === "masuk"
-                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                            ? "bg-brand-50 text-brand-800 border border-brand-200"
                             : "bg-rose-50 text-rose-800 border border-rose-200"
                         }`}>
                           {m.tipe}

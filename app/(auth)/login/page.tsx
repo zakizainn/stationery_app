@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 
 function LoginForm() {
   const router = useRouter();
@@ -38,24 +39,24 @@ function LoginForm() {
   }
 
   const demoAccounts = [
-    { label: "Staf (QA)", nik: "22071", pass: "password123", badge: "bg-emerald-100 text-emerald-800" },
+    { label: "Staf (QA)", nik: "22071", pass: "password123", badge: "bg-brand-100 text-brand-800" },
     { label: "Atasan (QA)", nik: "11769", pass: "password123", badge: "bg-blue-100 text-blue-800" },
     { label: "Admin Stationery", nik: "90002", pass: "password123", badge: "bg-amber-100 text-amber-900" },
     { label: "Superadmin", nik: "90001", pass: "password123", badge: "bg-purple-100 text-purple-900" },
   ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-4 font-sans relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-brand-950 to-slate-900 p-4 font-sans relative overflow-hidden">
       {/* Decorative background glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/20 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-500/20 blur-[120px] rounded-full pointer-events-none" />
 
-      <div className="w-full max-w-md bg-white/95 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl relative z-10 animate-fade-in">
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-xl border border-white/20 rounded-lg p-8 shadow-sm relative z-10 animate-fade-in">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 text-white font-extrabold text-2xl shadow-lg shadow-emerald-600/30 mb-3">
-            JAI
+          <div className="inline-flex items-center justify-center w-16 h-14 bg-white border border-slate-200 rounded-md p-2 mb-3">
+            <Image src="/logo-yazaki.jpg" alt="Yazaki" width={120} height={60} className="object-contain w-full h-full" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">PT Jatim Autocomp Indonesia</h1>
-          <p className="text-xs text-slate-500 font-semibold tracking-wide uppercase mt-1">Sistem Manajemen Stationery (ATK)</p>
+          <p className="text-xs text-slate-500 font-semibold tracking-wide uppercase mt-1">Sistem Pengajuan Alat Tulis Kantor (ATK)</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -68,7 +69,7 @@ function LoginForm() {
               value={nik}
               onChange={(e) => setNik(e.target.value)}
               placeholder="Contoh: 22071"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all"
               required
             />
           </div>
@@ -83,13 +84,13 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-md px-4 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all"
               required
             />
           </div>
 
           {error && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+            <div className="p-3 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
               <svg className="w-4 h-4 shrink-0 fill-rose-500" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
               </svg>
@@ -100,7 +101,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white rounded-xl py-3 text-sm font-bold shadow-lg shadow-emerald-700/25 transition-all disabled:opacity-60 cursor-pointer"
+            className="w-full bg-brand-700 hover:bg-brand-800 active:scale-[0.99] text-white rounded-md py-3 text-sm font-bold shadow-sm shadow-brand-700/25 transition-all disabled:opacity-60 cursor-pointer"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -130,9 +131,9 @@ function LoginForm() {
                   setPassword(acc.pass);
                   handleSubmit(undefined, acc.nik, acc.pass);
                 }}
-                className={`p-2.5 rounded-xl border border-slate-200/80 hover:border-emerald-500 text-left transition-all bg-slate-50/50 hover:bg-emerald-50/30 group cursor-pointer`}
+                className={`p-2.5 rounded-md border border-slate-200/80 hover:border-brand-500 text-left transition-all bg-slate-50/50 hover:bg-brand-50/30 group cursor-pointer`}
               >
-                <div className="text-xs font-bold text-slate-800 group-hover:text-emerald-700">
+                <div className="text-xs font-bold text-slate-800 group-hover:text-brand-700">
                   {acc.label}
                 </div>
                 <div className="text-[10px] text-slate-500 mt-0.5">

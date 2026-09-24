@@ -101,7 +101,7 @@ export default function DepartemenManagementPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-md border border-slate-200/80 shadow-xs">
         <div>
           <h1 className="text-xl font-extrabold text-slate-900">Manajemen Departemen PT JAI</h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -111,14 +111,14 @@ export default function DepartemenManagementPage() {
 
         <button
           onClick={openCreateModal}
-          className="bg-purple-700 hover:bg-purple-800 text-white font-bold px-5 py-2.5 rounded-xl shadow-md transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+          className="bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-md shadow-sm transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
         >
           + Tambah Departemen Baru
         </button>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+      <div className="bg-white rounded-md border border-slate-200/80 shadow-xs overflow-hidden">
         {loading ? (
           <div className="py-12 text-center text-xs text-slate-400">Memuat data departemen...</div>
         ) : (
@@ -159,7 +159,7 @@ export default function DepartemenManagementPage() {
       {/* Modal Add/Edit */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <form onSubmit={handleSave} className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-200 space-y-4">
+          <form onSubmit={handleSave} className="bg-white rounded-lg p-6 w-full max-w-md shadow-sm border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="font-extrabold text-slate-900 text-base">
                 {editingDept ? "Edit Departemen" : "Tambah Departemen Baru"}
@@ -179,7 +179,7 @@ export default function DepartemenManagementPage() {
                 value={kode}
                 onChange={(e) => setKode(e.target.value)}
                 placeholder="Contoh: HRD, QA, PROD"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 uppercase"
+                className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800 uppercase"
               />
             </div>
 
@@ -193,7 +193,7 @@ export default function DepartemenManagementPage() {
                 value={nama}
                 onChange={(e) => setNama(e.target.value)}
                 placeholder="Contoh: Human Resource Development"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800"
+                className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800"
               />
             </div>
 
@@ -201,13 +201,13 @@ export default function DepartemenManagementPage() {
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="flex-1 bg-slate-100 text-slate-700 font-bold text-xs py-2.5 rounded-xl cursor-pointer"
+                className="flex-1 bg-slate-100 text-slate-700 font-bold text-xs py-2.5 rounded-md cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs py-2.5 rounded-xl shadow-md cursor-pointer"
+                className="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2.5 rounded-md shadow-sm cursor-pointer"
               >
                 Simpan Departemen
               </button>

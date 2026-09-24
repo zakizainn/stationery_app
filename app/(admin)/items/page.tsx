@@ -275,13 +275,13 @@ export default function MasterItemsPage() {
     <div className="space-y-6">
       {/* Toast notifikasi hasil import (muncul setelah popup auto-tertutup) */}
       {toast && (
-        <div className="fixed top-4 right-4 z-[60] bg-emerald-700 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-lg max-w-xs animate-fade-in">
+        <div className="fixed top-4 right-4 z-[60] bg-brand-700 text-white text-xs font-semibold px-4 py-3 rounded-md shadow-sm max-w-xs animate-fade-in">
           {toast}
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-md border border-slate-200/80 shadow-xs">
         <div>
           <h1 className="text-xl font-extrabold text-slate-900">Master Data Barang Stationery</h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -292,13 +292,13 @@ export default function MasterItemsPage() {
         <div className="flex gap-2 shrink-0 self-start sm:self-auto">
           <button
             onClick={() => setImportModalOpen(true)}
-            className="bg-white hover:bg-slate-50 text-slate-700 font-bold px-5 py-2.5 rounded-xl shadow-xs border border-slate-200 transition-all text-xs cursor-pointer"
+            className="bg-white hover:bg-slate-50 text-slate-700 font-bold px-5 py-2.5 rounded-md shadow-xs border border-slate-200 transition-all text-xs cursor-pointer"
           >
             ⬆ Import Excel
           </button>
           <button
             onClick={openCreateModal}
-            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl shadow-md transition-all text-xs cursor-pointer"
+            className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 rounded-md shadow-sm transition-all text-xs cursor-pointer"
           >
             + Tambah Barang Baru
           </button>
@@ -312,12 +312,12 @@ export default function MasterItemsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Cari nama barang..."
-          className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="flex-1 bg-white border border-slate-200 rounded-md px-4 py-2.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
         <select
           value={kategoriFilter}
           onChange={(e) => setKategoriFilter(e.target.value)}
-          className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800"
+          className="bg-white border border-slate-200 rounded-md px-4 py-2.5 text-xs font-medium text-slate-800"
         >
           <option value="semua">Semua kategori</option>
           <option value="barang_umum">ATK</option>
@@ -328,7 +328,7 @@ export default function MasterItemsPage() {
       </div>
 
       {/* Items Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+      <div className="bg-white rounded-md border border-slate-200/80 shadow-xs overflow-hidden">
         {loading ? (
           <div className="py-12 text-center text-xs text-slate-400">Memuat data barang...</div>
         ) : filteredItems.length === 0 ? (
@@ -399,7 +399,7 @@ export default function MasterItemsPage() {
                         ) : (
                           <button
                             onClick={() => handleReaktifkan(item)}
-                            className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                            className="text-[11px] font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
                           >
                             Aktifkan
                           </button>
@@ -447,7 +447,7 @@ export default function MasterItemsPage() {
       {/* Modal Add/Edit */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <form onSubmit={handleSave} className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-200 space-y-4">
+          <form onSubmit={handleSave} className="bg-white rounded-lg p-6 w-full max-w-md shadow-sm border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="font-extrabold text-slate-900 text-base">
                 {editingItem ? "Edit Barang Stationery" : "Tambah Barang Baru"}
@@ -471,7 +471,7 @@ export default function MasterItemsPage() {
                 value={nama}
                 onChange={(e) => setNama(e.target.value)}
                 placeholder="Contoh: Pulpen Pilot Hitam 0.5"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
 
@@ -483,7 +483,7 @@ export default function MasterItemsPage() {
                 <select
                   value={kategori}
                   onChange={(e) => setKategori(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800"
                 >
                   <option value="barang_umum">ATK</option>
                   <option value="kertas">Kertas & Lainnya</option>
@@ -502,7 +502,7 @@ export default function MasterItemsPage() {
                   value={satuan}
                   onChange={(e) => setSatuan(e.target.value)}
                   placeholder="pcs, rim, pack, lembar"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800"
                 />
               </div>
             </div>
@@ -515,7 +515,7 @@ export default function MasterItemsPage() {
                 <select
                   value={jenisKertas}
                   onChange={(e) => setJenisKertas(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800"
                 >
                   <option value="A4">A4</option>
                   <option value="A3">A3</option>
@@ -535,7 +535,7 @@ export default function MasterItemsPage() {
                   min="0"
                   value={stok}
                   onChange={(e) => setStok(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
                 />
               </div>
 
@@ -548,7 +548,7 @@ export default function MasterItemsPage() {
                   min="0"
                   value={stokMinimum}
                   onChange={(e) => setStokMinimum(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
                 />
               </div>
 
@@ -561,7 +561,7 @@ export default function MasterItemsPage() {
                   min="0"
                   value={harga}
                   onChange={(e) => setHarga(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">Dipakai untuk hitung nominal di halaman Laporan.</p>
               </div>
@@ -575,7 +575,7 @@ export default function MasterItemsPage() {
                   min="0"
                   value={stokBuffer}
                   onChange={(e) => setStokBuffer(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">
                   Disembunyikan dari staf — mereka melihat stok gudang dikurangi angka ini. Admin tetap
@@ -590,7 +590,7 @@ export default function MasterItemsPage() {
                 id="bisaDitukar"
                 checked={bisaDitukar}
                 onChange={(e) => setBisaDitukar(e.target.checked)}
-                className="w-4 h-4 text-emerald-600 rounded"
+                className="w-4 h-4 text-brand-600 rounded"
               />
               <label htmlFor="bisaDitukar" className="text-xs font-semibold text-slate-700">
                 Wajib Tukar Barang Lama Saat Pengajuan
@@ -601,13 +601,13 @@ export default function MasterItemsPage() {
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="flex-1 bg-slate-100 text-slate-700 font-bold text-xs py-2.5 rounded-xl cursor-pointer"
+                className="flex-1 bg-slate-100 text-slate-700 font-bold text-xs py-2.5 rounded-md cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 rounded-xl shadow-md cursor-pointer"
+                className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md shadow-sm cursor-pointer"
               >
                 Simpan Item
               </button>
@@ -619,7 +619,7 @@ export default function MasterItemsPage() {
       {/* Modal Import Excel */}
       {importModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-200 space-y-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-sm border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="font-extrabold text-slate-900 text-base">Import dari Excel</h2>
               <button onClick={closeImportModal} className="text-slate-400 hover:text-slate-600 text-sm font-bold">
@@ -635,7 +635,7 @@ export default function MasterItemsPage() {
 
             <a
               href="/api/items/import"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-700 hover:text-brand-800"
             >
               ⬇ Unduh data seluruh item (untuk diedit/restock massal)
             </a>
@@ -648,12 +648,12 @@ export default function MasterItemsPage() {
                   setImportFile(e.target.files?.[0] ?? null);
                   setImportResult(null);
                 }}
-                className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-xs file:font-bold file:cursor-pointer cursor-pointer"
+                className="w-full text-xs border border-slate-200 rounded-md px-3 py-2.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-xs file:font-bold file:cursor-pointer cursor-pointer"
               />
             </div>
 
             {importResult && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs space-y-1.5">
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs space-y-1.5">
                 <p className="font-bold text-slate-800">
                   {importResult.summary.totalRows} baris diproses — {importResult.summary.created} item baru
                   dibuat, {importResult.summary.restocked} item di-restock.
@@ -672,7 +672,7 @@ export default function MasterItemsPage() {
               <button
                 type="button"
                 onClick={closeImportModal}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer"
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-md transition-all cursor-pointer"
               >
                 Tutup
               </button>
@@ -680,7 +680,7 @@ export default function MasterItemsPage() {
                 type="button"
                 disabled={!importFile || importing}
                 onClick={handleImport}
-                className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md shadow-sm transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {importing ? "Memproses..." : "Upload & Proses"}
               </button>
@@ -692,7 +692,7 @@ export default function MasterItemsPage() {
       {/* Modal Riwayat Harga */}
       {hargaHistoryItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-200 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-sm border border-slate-200 space-y-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h2 className="font-extrabold text-slate-900 text-base">Riwayat Harga</h2>
@@ -717,7 +717,7 @@ export default function MasterItemsPage() {
             ) : (
               <div className="space-y-2">
                 {hargaHistory.map((h) => (
-                  <div key={h.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3">
+                  <div key={h.id} className="flex items-center justify-between bg-slate-50 rounded-md px-4 py-3">
                     <div>
                       <p className="text-sm font-bold text-slate-800">
                         Rp {h.hargaLama.toLocaleString("id-ID")}
@@ -739,7 +739,7 @@ export default function MasterItemsPage() {
                       className={`text-xs font-bold px-2 py-1 rounded ${
                         h.hargaBaru > h.hargaLama
                           ? "bg-rose-50 text-rose-700"
-                          : "bg-emerald-50 text-emerald-700"
+                          : "bg-brand-50 text-brand-700"
                       }`}
                     >
                       {h.hargaBaru > h.hargaLama ? "▲ Naik" : "▼ Turun"}
@@ -751,7 +751,7 @@ export default function MasterItemsPage() {
 
             <button
               onClick={closeHargaHistory}
-              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer"
+              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-md transition-all cursor-pointer"
             >
               Tutup
             </button>
