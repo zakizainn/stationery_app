@@ -225,7 +225,7 @@ export default function RestockPage() {
                       <td className="py-3 px-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                           m.tipe === "masuk"
-                            ? "bg-brand-50 text-brand-800 border border-brand-200"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
                             : "bg-rose-50 text-rose-800 border border-rose-200"
                         }`}>
                           {m.tipe}

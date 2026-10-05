@@ -80,13 +80,13 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-amber-900 via-amber-800 to-slate-900 p-6 rounded-sm text-white">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border-l-4 border-brand-600 p-6 sm:p-8 rounded-lg text-white shadow-sm">
         <div>
-          <span className="inline-block px-3 py-1 bg-white/10 rounded-sm text-xs font-semibold text-amber-200 mb-2 border border-white/20">
+          <span className="inline-block px-3 py-1 bg-white/10 rounded text-xs font-semibold text-brand-200 mb-3 border border-white/10">
             Admin Stationery
           </span>
-          <h1 className="text-xl font-bold tracking-tight">Dashboard Stationery</h1>
-          <p className="text-xs text-amber-100/80 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard Stationery</h1>
+          <p className="text-sm text-slate-300 mt-2 leading-relaxed max-w-3xl">
             Proses dan serah terimakan pesanan barang stationery berikut dibawah ini (Order Rutin langsung & Order Baru disetujui atasan).
           </p>
         </div>
@@ -94,13 +94,13 @@ export default function AdminDashboardPage() {
         <div className="flex gap-2 shrink-0">
           <Link
             href="/items"
-            className="bg-white text-amber-900 font-bold px-4 py-2 rounded-md text-xs hover:bg-amber-50 transition-all"
+            className="bg-white text-brand-900 font-bold px-4 py-2.5 rounded-md text-xs hover:bg-brand-50 transition-all shadow-sm"
           >
             Kelola Barang
           </Link>
           <Link
             href="/restock"
-            className="bg-amber-700/80 text-white font-bold px-4 py-2 rounded-md text-xs hover:bg-amber-700 transition-all border border-amber-600"
+            className="bg-white/10 text-white font-semibold px-4 py-2.5 rounded-md text-xs hover:bg-white/20 transition-all border border-white/20"
           >
             Restock
           </Link>
@@ -108,11 +108,11 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Queue Table */}
-      <div className="bg-white rounded-sm border border-slate-300 p-6">
+      <div className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-bold text-slate-900">Antrean Pesanan Disetujui</h2>
-            <span className="px-2.5 py-0.5 rounded-sm bg-blue-100 text-blue-900 font-bold text-xs border border-blue-200">
+            <span className="px-2.5 py-1 rounded-full bg-brand-50 text-brand-800 font-bold text-xs border border-brand-200">
               {requests.length} Pesanan
             </span>
           </div>
@@ -121,7 +121,7 @@ export default function AdminDashboardPage() {
         {loading ? (
           <div className="py-12 text-center text-xs text-slate-400">Memuat antrean pesanan...</div>
         ) : requests.length === 0 ? (
-          <div className="py-12 text-center bg-slate-50 rounded-sm border border-dashed border-slate-300">
+          <div className="py-12 text-center bg-slate-50 rounded-md border border-dashed border-slate-200">
             <p className="text-xs text-slate-500 font-medium">Tidak ada pengajuan yang membutuhkan pemrosesan saat ini.</p>
           </div>
         ) : (
@@ -129,15 +129,15 @@ export default function AdminDashboardPage() {
             {requests.map((req) => (
               <div
                 key={req.id}
-                className="p-5 rounded-sm border border-slate-300 border-l-[3px] border-l-blue-500 hover:bg-slate-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white"
+                className="p-5 rounded-md border border-slate-200 border-l-[3px] border-l-amber-400 hover:bg-slate-50/70 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white"
               >
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="font-bold text-slate-900 text-sm">Pesanan #{req.noPengajuan}</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-200 text-slate-700">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
                       {req.tipe === "rutin" ? "Order Rutin" : "Order Baru"}
                     </span>
-                    <span className={`px-2.5 py-0.5 rounded-sm text-[10px] font-bold border ${
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
                       req.status === "diproses"
                         ? "bg-blue-50 text-blue-800 border-blue-200"
                         : "bg-brand-50 text-brand-800 border-brand-200"
@@ -156,7 +156,7 @@ export default function AdminDashboardPage() {
 
                   <div className="text-xs text-slate-500 flex flex-wrap gap-2 pt-1">
                     {req.items?.map((it: any) => (
-                      <span key={it.id} className="bg-white border border-slate-200 px-2 py-0.5 rounded text-[11px] font-medium">
+                      <span key={it.id} className="bg-slate-50 border border-slate-200 px-2 py-1 rounded text-xs font-medium">
                         {it.item?.nama} ({it.qtyDiajukan} {it.item?.satuan})
                       </span>
                     ))}
@@ -165,7 +165,7 @@ export default function AdminDashboardPage() {
 
                 <button
                   onClick={() => openProcessModal(req)}
-                  className="bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs px-4 py-2 rounded-sm transition-all cursor-pointer shrink-0"
+                  className="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-md shadow-sm transition-all cursor-pointer shrink-0"
                 >
                   Proses & Penyesuaian Qty →
                 </button>
@@ -178,7 +178,7 @@ export default function AdminDashboardPage() {
       {/* Modal Counter Offer / Process */}
       {activeReq && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-sm p-6 w-full max-w-2xl border border-slate-300 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl border border-slate-200 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
                 <h2 className="font-bold text-slate-900 text-base">Pemrosesan Pesanan #{activeReq.noPengajuan}</h2>
@@ -195,7 +195,7 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="p-3 bg-amber-50 rounded-sm border border-amber-300 text-xs text-amber-900">
+              <div className="p-3 bg-amber-50 rounded-md border border-amber-200 text-xs text-amber-900">
                 💡 <strong>Fitur Penyesuaian Stok (Counter Offer):</strong> Anda dapat mengedit jumlah barang yang benar-benar disetujui untuk dikeluarkan bila stok gudang terbatas.
               </div>
 
@@ -206,7 +206,7 @@ export default function AdminDashboardPage() {
                   const itemStok = it.item?.stok || 0;
 
                   return (
-                    <div key={it.id} className="p-4 bg-slate-50 rounded-sm border border-slate-300 space-y-3">
+                    <div key={it.id} className="p-4 bg-slate-50 rounded-md border border-slate-200 space-y-3">
                       <div className="flex items-start justify-between">
                         <div>
                           <h4 className="font-bold text-slate-900 text-sm">{it.item?.nama}</h4>
@@ -214,7 +214,7 @@ export default function AdminDashboardPage() {
                             Stok Gudang: <strong className="text-slate-800">{itemStok} {it.item?.satuan}</strong>
                           </div>
                           {it.penggunaan && (
-                            <div className="text-[11px] text-slate-500 italic mt-0.5">Tujuan: "{it.penggunaan}"</div>
+                            <div className="text-xs text-slate-500 italic mt-0.5">Tujuan: "{it.penggunaan}"</div>
                           )}
                         </div>
 
@@ -226,7 +226,7 @@ export default function AdminDashboardPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/60">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                             Jumlah Disetujui (Admin)
                           </label>
                           <input
@@ -251,7 +251,7 @@ export default function AdminDashboardPage() {
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                             Catatan Admin (Bila Ada Penyesuaian)
                           </label>
                           <input
@@ -278,13 +278,13 @@ export default function AdminDashboardPage() {
               <div className="pt-4 flex flex-col sm:flex-row gap-2 border-t border-slate-100">
                 <button
                   onClick={() => handleUpdateStatus("diproses")}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-sm cursor-pointer"
+                  className="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2.5 rounded-md cursor-pointer transition-colors"
                 >
                   Tandai &quot;Sedang Diproses&quot;
                 </button>
                 <button
                   onClick={() => handleUpdateStatus("selesai")}
-                  className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-sm cursor-pointer"
+                  className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md cursor-pointer shadow-sm transition-colors"
                 >
                   Selesaikan & Kurangi Stok Gudang ✓
                 </button>

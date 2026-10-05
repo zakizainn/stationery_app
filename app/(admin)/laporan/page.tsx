@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Fragment } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -13,6 +13,11 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { getKategoriLabel } from "@/lib/kategori";
+
+/* ------------------------------------------------------------------ */
+/* Tipe data (sama dengan respons /api/laporan)                        */
+/* ------------------------------------------------------------------ */
 
 interface HargaBreakdown {
   harga: number;
@@ -84,35 +89,65 @@ interface LaporanData {
   tren: TrenRow[];
 }
 
-// Warna khusus buat chart (beda dari brand-700 yang dipakai di tabel/card) --
-// brand-700 (#a3000d) dan rose-700 (#be123c) sama-sama merah tua, gampang
-// ketuker kalau ditaruh bersebelahan sebagai bar/garis. Biru vs rose jauh
-// lebih kebeda, terutama buat legend & bar yang berdampingan.
-const COLOR_MASUK = "#2563eb"; // blue-600
-const COLOR_KELUAR = "#be123c"; // rose-700, tetap konsisten sama kartu "Amount Out"
+type TabId = "ringkasan" | "barang" | "departemen" | "transaksi";
+type SortKey = "nama" | "qtyMasuk" | "nominalMasuk" | "qtyKeluar" | "nominalKeluar";
+type SortDir = "asc" | "desc";
 
+/* ------------------------------------------------------------------ */
+/* Konstanta & helper                                                  */
+/* ------------------------------------------------------------------ */
+
+// Satu pasang warna untuk "masuk" dan "keluar", dipakai SAMA di kartu, tabel,
+// badge, dan grafik. Biru = barang masuk (pembelian), merah brand = barang
+// keluar (pemakaian) -- sebelumnya keduanya merah sehingga sulit dibedakan.
+const COLOR_MASUK = "#2563eb"; // blue-600
+const COLOR_KELUAR = "#c50010"; // brand-600
+const TEXT_MASUK = "text-blue-700";
+const TEXT_KELUAR = "text-brand-700";
+
+const NAMA_BULAN = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
+const PAGE_SIZE = 25;
+
+const FOCUS = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1";
+const FOCUS_DARK = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white";
+
+const TH = "py-2.5 px-4 text-xs font-semibold text-slate-500 bg-slate-50 border-b border-slate-200 whitespace-nowrap";
+const TD = "py-3 px-4";
+
+function rupiah(n: number) {
+  return (n < 0 ? "−" : "") + "Rp " + Math.abs(n).toLocaleString("id-ID");
+}
+
+function angka(n: number) {
+  return n.toLocaleString("id-ID");
+}
+
+// Format singkat untuk sumbu grafik: 1,2 jt / 450 rb. Tanpa ".0" yang mubazir.
 function rupiahSingkat(n: number) {
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}jt`;
-  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(0)}rb`;
+  const abs = Math.abs(n);
+  const fmt = (v: number) => v.toLocaleString("id-ID", { maximumFractionDigits: 1 });
+  if (abs >= 1_000_000_000) return `${fmt(n / 1_000_000_000)} M`;
+  if (abs >= 1_000_000) return `${fmt(n / 1_000_000)} jt`;
+  if (abs >= 1_000) return `${fmt(n / 1_000)} rb`;
   return String(n);
 }
 
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
-  if (!active || !payload || payload.length === 0) return null;
-  return (
-    <div className="bg-white border border-slate-200 rounded-md shadow-md px-3 py-2 text-xs">
-      <p className="font-bold text-slate-700 mb-1">{label}</p>
-      {payload.map((p) => (
-        <p key={p.name} style={{ color: p.color }} className="font-medium">
-          {p.name}: {rupiah(p.value)}
-        </p>
-      ))}
-    </div>
-  );
-}
-
-function rupiah(n: number) {
-  return "Rp " + n.toLocaleString("id-ID");
+function potong(teks: string, maks: number) {
+  return teks.length > maks ? teks.slice(0, maks - 1) + "…" : teks;
 }
 
 function tanggalPendek(iso: string) {
@@ -124,487 +159,1251 @@ function currentMonthValue() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export default function LaporanPage() {
-  const [month, setMonth] = useState(currentMonthValue());
-  const [data, setData] = useState<LaporanData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
-  const [detailSearch, setDetailSearch] = useState("");
-  const [detailTipeFilter, setDetailTipeFilter] = useState<"semua" | "masuk" | "keluar">("semua");
-  const [view, setView] = useState<"tabel" | "grafik">("tabel");
+function shiftMonth(value: string, delta: number) {
+  const [y, m] = value.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 
-  useEffect(() => {
-    setLoading(true);
-    fetch(`/api/laporan?month=${month}`)
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.success) setData(res);
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  }, [month]);
+/* ------------------------------------------------------------------ */
+/* Ikon kecil (gaya sama dengan ikon di sidebar)                       */
+/* ------------------------------------------------------------------ */
 
-  const net = data ? data.summary.totalNominalMasuk - data.summary.totalNominalKeluar : 0;
+function Icon({ d, className = "h-4 w-4" }: { d: string; className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d={d} />
+    </svg>
+  );
+}
 
-  const filteredDetail = (data?.detailTransaksi ?? []).filter((row) => {
-    if (detailTipeFilter !== "semua" && row.tipe !== detailTipeFilter) return false;
-    if (!detailSearch.trim()) return true;
-    const q = detailSearch.trim().toLowerCase();
-    return (
-      row.itemNama.toLowerCase().includes(q) ||
-      (row.noPengajuan?.toLowerCase().includes(q) ?? false) ||
-      (row.departemen?.toLowerCase().includes(q) ?? false) ||
-      (row.pemohon?.toLowerCase().includes(q) ?? false)
-    );
-  });
+const ICON_PATH = {
+  left: "M15 19l-7-7 7-7",
+  right: "M9 5l7 7-7 7",
+  download: "M12 4v12m0 0l-4-4m4 4l4-4M4 20h16",
+  printer:
+    "M6.72 13.83a42 42 0 0110.56 0m-10.56 0c-1.13.17-1.97 1.15-1.97 2.3v1.62c0 1.1.9 2 2 2h.75m.22-5.92L6 8.25A2.25 2.25 0 018.25 6h7.5A2.25 2.25 0 0118 8.25l-.22 5.58m-10.56 0V18h10.56v-4.17M9 21h6",
+  up: "M5 15l7-7 7 7",
+  down: "M19 9l-7 7-7-7",
+  alert: "M12 9v3.75m0 3.75h.01M10.29 3.86l-8.4 14.55A1.5 1.5 0 003.19 20.7h17.62a1.5 1.5 0 001.3-2.29l-8.4-14.55a1.5 1.5 0 00-2.42 0z",
+};
+
+function SortIcon({ state }: { state: SortDir | null }) {
+  return (
+    <svg className={`h-3 w-3 ${state ? "text-slate-700" : "text-slate-300"}`} viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+      <path d="M6 1.5l3 4H3l3-4z" opacity={state === "desc" ? 0.25 : 1} />
+      <path d="M6 10.5l-3-4h6l-3 4z" opacity={state === "asc" ? 0.25 : 1} />
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Komponen dasar                                                      */
+/* ------------------------------------------------------------------ */
+
+function Card({
+  title,
+  hint,
+  actions,
+  children,
+  className = "",
+}: {
+  title: string;
+  hint?: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`rounded-md border border-slate-200/80 bg-white p-5 shadow-xs sm:p-6 print:break-inside-avoid ${className}`}>
+      <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+        <div>
+          <h2 className="text-base font-bold text-slate-900">{title}</h2>
+          {hint && <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500">{hint}</p>}
+        </div>
+        {actions && <div className="flex flex-wrap items-center gap-2 print:hidden">{actions}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function EmptyState({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+      <p className="text-sm font-semibold text-slate-700">{title}</p>
+      {hint && <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-slate-500">{hint}</p>}
+    </div>
+  );
+}
+
+function ChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: { name: string; value: number; color: string }[];
+  label?: string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs shadow-md">
+      <p className="mb-1 font-bold text-slate-800">{label}</p>
+      {payload.map((p) => (
+        <p key={p.name} style={{ color: p.color }} className="font-medium tabular-nums">
+          {p.name}: {rupiah(p.value)}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// Batang kecil di dalam sel tabel: porsi sebuah angka terhadap totalnya.
+function ShareBar({ value, total, color }: { value: number; total: number; color: string }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="mt-1 flex items-center justify-end gap-2" aria-label={`${pct} persen dari total`}>
+      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <span className="w-8 text-right text-[11px] tabular-nums text-slate-500">{pct}%</span>
+    </div>
+  );
+}
+
+function Dash() {
+  return <span className="text-slate-300">–</span>;
+}
+
+function SortTh({
+  label,
+  k,
+  sortKey,
+  sortDir,
+  onSort,
+  align = "right",
+  dot,
+}: {
+  label: string;
+  k: SortKey;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onSort: (k: SortKey) => void;
+  align?: "left" | "right";
+  dot?: string;
+}) {
+  const active = sortKey === k;
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+      className={`${TH} ${align === "right" ? "text-right" : "text-left"}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        className={`inline-flex cursor-pointer items-center gap-1.5 rounded font-semibold hover:text-slate-900 ${FOCUS} ${
+          active ? "text-slate-900" : ""
+        }`}
+      >
+        {dot && <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: dot }} />}
+        {label}
+        <SortIcon state={active ? sortDir : null} />
+      </button>
+    </th>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Pemilih periode                                                     */
+/* ------------------------------------------------------------------ */
+
+function PeriodSwitcher({ month, onChange }: { month: string; onChange: (m: string) => void }) {
+  const nowValue = currentMonthValue();
+  const [nowYear, nowMonth] = nowValue.split("-").map(Number);
+  const [year, mon] = month.split("-").map(Number);
+
+  const years = useMemo(() => {
+    const list: number[] = [];
+    for (let y = nowYear; y >= nowYear - 4; y--) list.push(y);
+    if (!list.includes(year)) list.push(year);
+    return list.sort((a, b) => b - a);
+  }, [nowYear, year]);
+
+  const clamp = (y: number, m: number) => {
+    const v = `${y}-${String(y === nowYear ? Math.min(m, nowMonth) : m).padStart(2, "0")}`;
+    return v;
+  };
+
+  const selectCls = `cursor-pointer rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/20 [&>option]:text-slate-900 ${FOCUS_DARK}`;
+  const stepCls = `flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-white/20 bg-white/10 text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/10 ${FOCUS_DARK}`;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-md border border-slate-200/80 shadow-xs print:hidden">
+    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Pilih periode laporan">
+      <button type="button" className={stepCls} onClick={() => onChange(shiftMonth(month, -1))} aria-label="Bulan sebelumnya">
+        <Icon d={ICON_PATH.left} />
+      </button>
+      <select aria-label="Bulan" value={mon} onChange={(e) => onChange(clamp(year, Number(e.target.value)))} className={selectCls}>
+        {NAMA_BULAN.map((nama, i) => (
+          <option key={nama} value={i + 1} disabled={year === nowYear && i + 1 > nowMonth}>
+            {nama}
+          </option>
+        ))}
+      </select>
+      <select aria-label="Tahun" value={year} onChange={(e) => onChange(clamp(Number(e.target.value), mon))} className={selectCls}>
+        {years.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        className={stepCls}
+        onClick={() => onChange(shiftMonth(month, 1))}
+        disabled={month >= nowValue}
+        aria-label="Bulan berikutnya"
+      >
+        <Icon d={ICON_PATH.right} />
+      </button>
+      {month !== nowValue && (
+        <button
+          type="button"
+          onClick={() => onChange(nowValue)}
+          className={`cursor-pointer rounded-md px-2 py-2 text-xs font-semibold text-brand-200 underline-offset-4 hover:text-white hover:underline ${FOCUS_DARK}`}
+        >
+          Bulan ini
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Kartu KPI                                                           */
+/* ------------------------------------------------------------------ */
+
+// Perbandingan dengan bulan lalu. Sengaja netral (abu-abu, tanpa hijau/merah):
+// pemakaian naik belum tentu buruk, dan pembelian naik belum tentu baik.
+function Delta({ current, previous, prevLabel }: { current: number; previous: number; prevLabel: string }) {
+  if (previous === 0) {
+    return (
+      <p className="mt-2 text-xs text-slate-400">
+        {current === 0 ? `Tidak ada transaksi di ${prevLabel}` : `Belum ada pembanding di ${prevLabel}`}
+      </p>
+    );
+  }
+  const pct = ((current - previous) / Math.abs(previous)) * 100;
+  if (Math.abs(pct) < 0.5) {
+    return <p className="mt-2 text-xs text-slate-500">Sama dengan {prevLabel}</p>;
+  }
+  return (
+    <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
+      <Icon d={pct > 0 ? ICON_PATH.up : ICON_PATH.down} className="h-3.5 w-3.5 text-slate-600" />
+      <span className="font-semibold tabular-nums text-slate-700">{Math.abs(Math.round(pct))}%</span>
+      <span>dibanding {prevLabel}</span>
+    </p>
+  );
+}
+
+function KpiCard({
+  title,
+  value,
+  sub,
+  accent,
+  children,
+}: {
+  title: string;
+  value: string;
+  sub?: string;
+  accent: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-md border border-slate-200/80 border-l-[3px] bg-white p-5 shadow-xs print:break-inside-avoid" style={{ borderLeftColor: accent }}>
+      <p className="text-sm font-semibold text-slate-600">{title}</p>
+      <p className="mt-1.5 text-2xl font-extrabold tabular-nums tracking-tight text-slate-900">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-slate-500">{sub}</p>}
+      {children}
+    </div>
+  );
+}
+
+function SplitBar({ masuk, keluar }: { masuk: number; keluar: number }) {
+  const total = masuk + keluar;
+  const pctMasuk = total > 0 ? (masuk / total) * 100 : 0;
+  return (
+    <div className="mt-3">
+      <div className="flex h-2 overflow-hidden rounded-full bg-slate-100" role="img" aria-label={`Masuk ${Math.round(pctMasuk)} persen, keluar ${Math.round(100 - pctMasuk)} persen dari total pergerakan`}>
+        {total > 0 && (
+          <>
+            <div style={{ width: `${pctMasuk}%`, background: COLOR_MASUK }} />
+            <div style={{ width: `${100 - pctMasuk}%`, background: COLOR_KELUAR }} />
+          </>
+        )}
+      </div>
+      <div className="mt-1.5 flex justify-between text-[11px] text-slate-500">
+        <span>Masuk {Math.round(pctMasuk)}%</span>
+        <span>Keluar {total > 0 ? Math.round(100 - pctMasuk) : 0}%</span>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Tab: Ringkasan                                                      */
+/* ------------------------------------------------------------------ */
+
+function TabRingkasan({ data }: { data: LaporanData }) {
+  const trenKosong = data.tren.every((t) => t.nominalMasuk === 0 && t.nominalKeluar === 0);
+  const totalMasuk = data.summary.totalNominalMasuk;
+  const totalKeluar = data.summary.totalNominalKeluar;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-5">
+        <Card
+          title="Tren 6 bulan terakhir"
+          hint="Selalu menampilkan 6 bulan sampai periode yang dipilih."
+          className="lg:col-span-3"
+        >
+          {trenKosong ? (
+            <EmptyState title="Belum ada transaksi dalam 6 bulan ini" />
+          ) : (
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.tren} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#64748b" }} stroke="#cbd5e1" />
+                  <YAxis tick={{ fontSize: 12, fill: "#64748b" }} stroke="#cbd5e1" tickFormatter={rupiahSingkat} width={56} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Line type="monotone" dataKey="nominalMasuk" name="Amount In" stroke={COLOR_MASUK} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                  <Line
+                    type="monotone"
+                    dataKey="nominalKeluar"
+                    name="Amount Out"
+                    stroke={COLOR_KELUAR}
+                    strokeWidth={2.5}
+                    strokeDasharray="6 3"
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </Card>
+
+        <Card title="Nominal per kategori" className="lg:col-span-2">
+          {data.perKategori.length === 0 ? (
+            <EmptyState title="Belum ada transaksi di periode ini" />
+          ) : (
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.perKategori} layout="vertical" margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 12, fill: "#64748b" }} stroke="#cbd5e1" tickFormatter={rupiahSingkat} />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    tick={{ fontSize: 12, fill: "#475569" }}
+                    stroke="#cbd5e1"
+                    width={120}
+                    tickFormatter={(v: string) => potong(v, 18)}
+                  />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: "#f8fafc" }} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="nominalMasuk" name="Amount In" fill={COLOR_MASUK} radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="nominalKeluar" name="Amount Out" fill={COLOR_KELUAR} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      <Card title="Rekap per kategori" hint="Persentase menunjukkan porsi tiap kategori terhadap total bulan ini.">
+        {data.perKategori.length === 0 ? (
+          <EmptyState
+            title="Belum ada transaksi di periode ini"
+            hint="Transaksi muncul setelah ada restock atau pesanan yang diselesaikan."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead>
+                <tr>
+                  <th scope="col" className={TH}>Kategori</th>
+                  <th scope="col" className={`${TH} text-right`}>Qty masuk</th>
+                  <th scope="col" className={`${TH} text-right`}>Nominal masuk</th>
+                  <th scope="col" className={`${TH} text-right`}>Qty keluar</th>
+                  <th scope="col" className={`${TH} text-right`}>Nominal keluar</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {data.perKategori.map((k) => (
+                  <tr key={k.kategori} className="hover:bg-slate-50/70">
+                    <td className={`${TD} font-semibold text-slate-900`}>{k.label}</td>
+                    <td className={`${TD} text-right tabular-nums`}>{k.qtyMasuk > 0 ? angka(k.qtyMasuk) : <Dash />}</td>
+                    <td className={`${TD} text-right tabular-nums`}>
+                      {k.nominalMasuk > 0 ? (
+                        <>
+                          <span className={`font-semibold ${TEXT_MASUK}`}>{rupiah(k.nominalMasuk)}</span>
+                          <ShareBar value={k.nominalMasuk} total={totalMasuk} color={COLOR_MASUK} />
+                        </>
+                      ) : (
+                        <Dash />
+                      )}
+                    </td>
+                    <td className={`${TD} text-right tabular-nums`}>{k.qtyKeluar > 0 ? angka(k.qtyKeluar) : <Dash />}</td>
+                    <td className={`${TD} text-right tabular-nums`}>
+                      {k.nominalKeluar > 0 ? (
+                        <>
+                          <span className={`font-semibold ${TEXT_KELUAR}`}>{rupiah(k.nominalKeluar)}</span>
+                          <ShareBar value={k.nominalKeluar} total={totalKeluar} color={COLOR_KELUAR} />
+                        </>
+                      ) : (
+                        <Dash />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold text-slate-900">
+                  <td className={TD}>Total</td>
+                  <td className={`${TD} text-right tabular-nums`}>{angka(data.summary.totalQtyMasuk)}</td>
+                  <td className={`${TD} text-right tabular-nums ${TEXT_MASUK}`}>{rupiah(totalMasuk)}</td>
+                  <td className={`${TD} text-right tabular-nums`}>{angka(data.summary.totalQtyKeluar)}</td>
+                  <td className={`${TD} text-right tabular-nums ${TEXT_KELUAR}`}>{rupiah(totalKeluar)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Tab: Per barang                                                     */
+/* ------------------------------------------------------------------ */
+
+function TabBarang({ data }: { data: LaporanData }) {
+  const [q, setQ] = useState("");
+  const [kategori, setKategori] = useState("semua");
+  const [sortKey, setSortKey] = useState<SortKey>("nominalKeluar");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const kategoriOptions = useMemo(
+    () => Array.from(new Set(data.perItem.map((it) => it.kategori))),
+    [data.perItem]
+  );
+
+  const topKeluar = useMemo(
+    () =>
+      data.perItem
+        .filter((it) => it.nominalKeluar > 0)
+        .sort((a, b) => b.nominalKeluar - a.nominalKeluar)
+        .slice(0, 8),
+    [data.perItem]
+  );
+
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const filtered = data.perItem.filter((it) => {
+      if (kategori !== "semua" && it.kategori !== kategori) return false;
+      return !needle || it.nama.toLowerCase().includes(needle);
+    });
+    const dir = sortDir === "asc" ? 1 : -1;
+    return filtered.sort((a, b) =>
+      sortKey === "nama" ? a.nama.localeCompare(b.nama, "id") * dir : (a[sortKey] - b[sortKey]) * dir
+    );
+  }, [data.perItem, q, kategori, sortKey, sortDir]);
+
+  const total = useMemo(
+    () =>
+      rows.reduce(
+        (acc, it) => ({
+          qtyMasuk: acc.qtyMasuk + it.qtyMasuk,
+          nominalMasuk: acc.nominalMasuk + it.nominalMasuk,
+          qtyKeluar: acc.qtyKeluar + it.qtyKeluar,
+          nominalKeluar: acc.nominalKeluar + it.nominalKeluar,
+        }),
+        { qtyMasuk: 0, nominalMasuk: 0, qtyKeluar: 0, nominalKeluar: 0 }
+      ),
+    [rows]
+  );
+
+  const onSort = (k: SortKey) => {
+    if (k === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(k);
+      setSortDir(k === "nama" ? "asc" : "desc");
+    }
+  };
+
+  if (data.perItem.length === 0) {
+    return (
+      <Card title="Per barang">
+        <EmptyState
+          title="Belum ada transaksi di periode ini"
+          hint="Transaksi muncul setelah ada restock atau pesanan yang diselesaikan."
+        />
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card title="8 barang dengan nominal pemakaian terbesar" hint="Diurutkan berdasarkan nominal keluar, bukan jumlah unit.">
+        {topKeluar.length === 0 ? (
+          <EmptyState title="Belum ada barang keluar di periode ini" hint="Periode ini hanya berisi restock." />
+        ) : (
+          <div style={{ height: Math.max(180, topKeluar.length * 40 + 40) }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={topKeluar} layout="vertical" margin={{ top: 4, right: 24, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 12, fill: "#64748b" }} stroke="#cbd5e1" tickFormatter={rupiahSingkat} />
+                <YAxis
+                  type="category"
+                  dataKey="nama"
+                  tick={{ fontSize: 12, fill: "#475569" }}
+                  stroke="#cbd5e1"
+                  width={170}
+                  tickFormatter={(v: string) => potong(v, 26)}
+                />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: "#f8fafc" }} />
+                <Bar dataKey="nominalKeluar" name="Amount Out" fill={COLOR_KELUAR} radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </Card>
+
+      <Card
+        title="Amount In / Out per barang"
+        hint="Klik judul kolom untuk mengurutkan. Jika harga barang berubah di tengah bulan, tombol Harga berubah menampilkan rincian per harga."
+        actions={
+          <>
+            <select
+              aria-label="Filter kategori"
+              value={kategori}
+              onChange={(e) => setKategori(e.target.value)}
+              className={`cursor-pointer rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 ${FOCUS}`}
+            >
+              <option value="semua">Semua kategori</option>
+              {kategoriOptions.map((k) => (
+                <option key={k} value={k}>
+                  {getKategoriLabel(k)}
+                </option>
+              ))}
+            </select>
+            <input
+              type="search"
+              aria-label="Cari barang"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Cari nama barang"
+              className={`w-48 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 ${FOCUS}`}
+            />
+          </>
+        }
+      >
+        {rows.length === 0 ? (
+          <EmptyState title="Tidak ada barang yang cocok" hint="Ubah kata kunci atau pilih Semua kategori." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead>
+                <tr>
+                  <SortTh label="Barang" k="nama" sortKey={sortKey} sortDir={sortDir} onSort={onSort} align="left" />
+                  <th scope="col" className={`${TH} text-right`}>Harga satuan</th>
+                  <SortTh label="Qty masuk" k="qtyMasuk" sortKey={sortKey} sortDir={sortDir} onSort={onSort} dot={COLOR_MASUK} />
+                  <SortTh label="Nominal masuk" k="nominalMasuk" sortKey={sortKey} sortDir={sortDir} onSort={onSort} dot={COLOR_MASUK} />
+                  <SortTh label="Qty keluar" k="qtyKeluar" sortKey={sortKey} sortDir={sortDir} onSort={onSort} dot={COLOR_KELUAR} />
+                  <SortTh label="Nominal keluar" k="nominalKeluar" sortKey={sortKey} sortDir={sortDir} onSort={onSort} dot={COLOR_KELUAR} />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {rows.map((it) => {
+                  const berubah = it.hargaMin !== it.hargaMax;
+                  const terbuka = expandedId === it.itemId;
+                  return (
+                    <Fragment key={it.itemId}>
+                      <tr className="hover:bg-slate-50/70">
+                        <td className={TD}>
+                          <div className="font-semibold text-slate-900">{it.nama}</div>
+                          <div className="text-xs text-slate-500">{getKategoriLabel(it.kategori)}</div>
+                        </td>
+                        <td className={`${TD} text-right tabular-nums`}>
+                          {berubah ? (
+                            <div className="flex flex-col items-end gap-1">
+                              <span>
+                                {rupiah(it.hargaMin)} – {rupiah(it.hargaMax)}
+                              </span>
+                              <button
+                                type="button"
+                                aria-expanded={terbuka}
+                                onClick={() => setExpandedId(terbuka ? null : it.itemId)}
+                                className={`inline-flex cursor-pointer items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800 hover:bg-amber-100 print:hidden ${FOCUS}`}
+                              >
+                                Harga berubah
+                                <Icon d={terbuka ? ICON_PATH.up : ICON_PATH.down} className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            rupiah(it.hargaMin)
+                          )}
+                        </td>
+                        <td className={`${TD} text-right tabular-nums`}>
+                          {it.qtyMasuk > 0 ? `${angka(it.qtyMasuk)} ${it.satuan}` : <Dash />}
+                        </td>
+                        <td className={`${TD} text-right font-semibold tabular-nums ${TEXT_MASUK}`}>
+                          {it.nominalMasuk > 0 ? rupiah(it.nominalMasuk) : <Dash />}
+                        </td>
+                        <td className={`${TD} text-right tabular-nums`}>
+                          {it.qtyKeluar > 0 ? `${angka(it.qtyKeluar)} ${it.satuan}` : <Dash />}
+                        </td>
+                        <td className={`${TD} text-right font-semibold tabular-nums ${TEXT_KELUAR}`}>
+                          {it.nominalKeluar > 0 ? rupiah(it.nominalKeluar) : <Dash />}
+                        </td>
+                      </tr>
+                      {terbuka && (
+                        <tr>
+                          <td colSpan={6} className="bg-amber-50/60 px-4 py-3">
+                            <p className="mb-2 text-xs font-semibold text-amber-900">Rincian per harga: {it.nama}</p>
+                            <table className="w-full text-xs">
+                              <thead className="text-slate-500">
+                                <tr>
+                                  <th className="px-2 py-1.5 text-left font-semibold">Harga</th>
+                                  <th className="px-2 py-1.5 text-right font-semibold">Qty masuk</th>
+                                  <th className="px-2 py-1.5 text-right font-semibold">Nominal masuk</th>
+                                  <th className="px-2 py-1.5 text-right font-semibold">Qty keluar</th>
+                                  <th className="px-2 py-1.5 text-right font-semibold">Nominal keluar</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {it.breakdown.map((b) => (
+                                  <tr key={b.harga} className="border-t border-amber-100 tabular-nums">
+                                    <td className="px-2 py-1.5 font-semibold text-slate-800">{rupiah(b.harga)}</td>
+                                    <td className="px-2 py-1.5 text-right">{b.qtyMasuk > 0 ? `${angka(b.qtyMasuk)} ${it.satuan}` : <Dash />}</td>
+                                    <td className={`px-2 py-1.5 text-right ${TEXT_MASUK}`}>{b.qtyMasuk > 0 ? rupiah(b.nominalMasuk) : <Dash />}</td>
+                                    <td className="px-2 py-1.5 text-right">{b.qtyKeluar > 0 ? `${angka(b.qtyKeluar)} ${it.satuan}` : <Dash />}</td>
+                                    <td className={`px-2 py-1.5 text-right ${TEXT_KELUAR}`}>{b.qtyKeluar > 0 ? rupiah(b.nominalKeluar) : <Dash />}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold text-slate-900">
+                  <td className={TD}>
+                    Total ({rows.length} barang{rows.length !== data.perItem.length ? `, dari ${data.perItem.length}` : ""})
+                  </td>
+                  <td className={TD} />
+                  <td className={`${TD} text-right tabular-nums`}>{angka(total.qtyMasuk)}</td>
+                  <td className={`${TD} text-right tabular-nums ${TEXT_MASUK}`}>{rupiah(total.nominalMasuk)}</td>
+                  <td className={`${TD} text-right tabular-nums`}>{angka(total.qtyKeluar)}</td>
+                  <td className={`${TD} text-right tabular-nums ${TEXT_KELUAR}`}>{rupiah(total.nominalKeluar)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Tab: Per departemen                                                 */
+/* ------------------------------------------------------------------ */
+
+function TabDepartemen({ data }: { data: LaporanData }) {
+  const totalKeluar = data.summary.totalNominalKeluar;
+  const topDept = data.perDepartemen.slice(0, 10);
+  const totalQty = data.perDepartemen.reduce((s, d) => s + d.qtyKeluar, 0);
+  const totalNominal = data.perDepartemen.reduce((s, d) => s + d.nominalKeluar, 0);
+
+  if (data.perDepartemen.length === 0) {
+    return (
+      <Card title="Pemakaian per departemen">
+        <EmptyState
+          title="Belum ada pemakaian di periode ini"
+          hint="Data departemen hanya berasal dari pesanan yang sudah diselesaikan."
+        />
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card
+        title="Pemakaian per departemen"
+        hint={
+          data.perDepartemen.length > 10
+            ? "Grafik menampilkan 10 departemen terbesar. Tabel di bawah memuat semuanya."
+            : "Hanya transaksi keluar. Restock tidak terikat departemen tertentu."
+        }
+      >
+        <div style={{ height: Math.max(200, topDept.length * 44 + 40) }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={topDept} layout="vertical" margin={{ top: 4, right: 24, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 12, fill: "#64748b" }} stroke="#cbd5e1" tickFormatter={rupiahSingkat} />
+              <YAxis
+                type="category"
+                dataKey="departemen"
+                tick={{ fontSize: 12, fill: "#475569" }}
+                stroke="#cbd5e1"
+                width={150}
+                tickFormatter={(v: string) => potong(v, 22)}
+              />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: "#f8fafc" }} />
+              <Bar dataKey="nominalKeluar" name="Amount Out" fill={COLOR_KELUAR} radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      <Card title="Rekap per departemen">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-left text-sm">
+            <thead>
+              <tr>
+                <th scope="col" className={TH}>Departemen</th>
+                <th scope="col" className={`${TH} text-right`}>Qty diambil</th>
+                <th scope="col" className={`${TH} text-right`}>Nominal keluar</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {data.perDepartemen.map((d) => (
+                <tr key={d.departemen} className="hover:bg-slate-50/70">
+                  <td className={`${TD} font-semibold text-slate-900`}>{d.departemen}</td>
+                  <td className={`${TD} text-right tabular-nums`}>{angka(d.qtyKeluar)} unit</td>
+                  <td className={`${TD} text-right tabular-nums`}>
+                    <span className={`font-semibold ${TEXT_KELUAR}`}>{rupiah(d.nominalKeluar)}</span>
+                    <ShareBar value={d.nominalKeluar} total={totalKeluar} color={COLOR_KELUAR} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold text-slate-900">
+                <td className={TD}>Total</td>
+                <td className={`${TD} text-right tabular-nums`}>{angka(totalQty)} unit</td>
+                <td className={`${TD} text-right tabular-nums ${TEXT_KELUAR}`}>{rupiah(totalNominal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Tab: Transaksi                                                      */
+/* ------------------------------------------------------------------ */
+
+function TabTransaksi({ data, showAll }: { data: LaporanData; showAll: boolean }) {
+  const [tipe, setTipe] = useState<"semua" | "masuk" | "keluar">("semua");
+  const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return data.detailTransaksi.filter((row) => {
+      if (tipe !== "semua" && row.tipe !== tipe) return false;
+      if (!needle) return true;
+      return (
+        row.itemNama.toLowerCase().includes(needle) ||
+        (row.noPengajuan?.toLowerCase().includes(needle) ?? false) ||
+        (row.departemen?.toLowerCase().includes(needle) ?? false) ||
+        (row.pemohon?.toLowerCase().includes(needle) ?? false)
+      );
+    });
+  }, [data.detailTransaksi, tipe, q]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const current = Math.min(page, totalPages);
+  const from = (current - 1) * PAGE_SIZE;
+  const rows = showAll ? filtered : filtered.slice(from, from + PAGE_SIZE);
+
+  const sumMasuk = filtered.filter((r) => r.tipe === "masuk").reduce((s, r) => s + r.nominal, 0);
+  const sumKeluar = filtered.filter((r) => r.tipe === "keluar").reduce((s, r) => s + r.nominal, 0);
+
+  const segCls = (aktif: boolean) =>
+    `cursor-pointer rounded px-3 py-1.5 text-sm font-semibold transition-colors ${FOCUS} ${
+      aktif ? "bg-white text-brand-700 shadow-xs" : "text-slate-500 hover:text-slate-800"
+    }`;
+
+  return (
+    <Card
+      title="Detail transaksi"
+      hint="Setiap pergerakan stok pada periode ini. Pengajuan dan pemohon hanya terisi untuk barang keluar."
+      actions={
+        <>
+          <div className="flex items-center rounded-md border border-slate-200 bg-slate-50 p-0.5" role="group" aria-label="Filter tipe transaksi">
+            {(["semua", "masuk", "keluar"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={tipe === t}
+                onClick={() => {
+                  setTipe(t);
+                  setPage(1);
+                }}
+                className={segCls(tipe === t)}
+              >
+                {t === "semua" ? "Semua" : t === "masuk" ? "Masuk" : "Keluar"}
+              </button>
+            ))}
+          </div>
+          <input
+            type="search"
+            aria-label="Cari transaksi"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Cari barang, pengajuan, departemen, pemohon"
+            className={`w-72 max-w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 ${FOCUS}`}
+          />
+        </>
+      }
+    >
+      {filtered.length === 0 ? (
+        <EmptyState
+          title={data.detailTransaksi.length === 0 ? "Belum ada transaksi di periode ini" : "Tidak ada transaksi yang cocok"}
+          hint={data.detailTransaksi.length === 0 ? "Transaksi muncul setelah ada restock atau pesanan yang diselesaikan." : "Ubah kata kunci atau pilih tipe Semua."}
+        />
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-left text-sm">
+              <thead>
+                <tr>
+                  <th scope="col" className={TH}>Tanggal</th>
+                  <th scope="col" className={TH}>Tipe</th>
+                  <th scope="col" className={TH}>Barang</th>
+                  <th scope="col" className={`${TH} text-right`}>Qty</th>
+                  <th scope="col" className={`${TH} text-right`}>Harga</th>
+                  <th scope="col" className={`${TH} text-right`}>Nominal</th>
+                  <th scope="col" className={TH}>No. pengajuan</th>
+                  <th scope="col" className={TH}>Departemen</th>
+                  <th scope="col" className={TH}>Pemohon</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {rows.map((row) => (
+                  <tr key={row.id} className="hover:bg-slate-50/70">
+                    <td className={`${TD} whitespace-nowrap text-slate-500`}>{tanggalPendek(row.tanggal)}</td>
+                    <td className={TD}>
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                          row.tipe === "masuk"
+                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            : "border-brand-200 bg-brand-50 text-brand-700"
+                        }`}
+                      >
+                        {row.tipe === "masuk" ? "Masuk" : "Keluar"}
+                      </span>
+                    </td>
+                    <td className={`${TD} font-semibold text-slate-900`}>{row.itemNama}</td>
+                    <td className={`${TD} text-right tabular-nums`}>
+                      {angka(row.qty)} {row.satuan}
+                    </td>
+                    <td className={`${TD} text-right tabular-nums text-slate-500`}>{rupiah(row.harga)}</td>
+                    <td className={`${TD} text-right font-semibold tabular-nums ${row.tipe === "masuk" ? TEXT_MASUK : TEXT_KELUAR}`}>
+                      {rupiah(row.nominal)}
+                    </td>
+                    <td className={`${TD} whitespace-nowrap text-slate-500`}>{row.noPengajuan ?? <Dash />}</td>
+                    <td className={`${TD} text-slate-500`}>{row.departemen ?? <Dash />}</td>
+                    <td className={`${TD} text-slate-500`}>{row.pemohon ?? <Dash />}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 flex flex-col justify-between gap-3 border-t border-slate-100 pt-4 text-sm text-slate-600 sm:flex-row sm:items-center">
+            <div className="space-y-0.5">
+              <p>
+                {showAll
+                  ? `${angka(filtered.length)} transaksi`
+                  : `Menampilkan ${angka(from + 1)}–${angka(Math.min(from + PAGE_SIZE, filtered.length))} dari ${angka(filtered.length)} transaksi`}
+              </p>
+              <p className="text-xs text-slate-500">
+                Total hasil ini:{" "}
+                <span className={`font-semibold tabular-nums ${TEXT_MASUK}`}>masuk {rupiah(sumMasuk)}</span>
+                {", "}
+                <span className={`font-semibold tabular-nums ${TEXT_KELUAR}`}>keluar {rupiah(sumKeluar)}</span>
+              </p>
+            </div>
+            {!showAll && totalPages > 1 && (
+              <div className="flex items-center gap-2 print:hidden">
+                <button
+                  type="button"
+                  onClick={() => setPage(current - 1)}
+                  disabled={current <= 1}
+                  className={`cursor-pointer rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 ${FOCUS}`}
+                >
+                  Sebelumnya
+                </button>
+                <span className="px-1 text-xs tabular-nums text-slate-500">
+                  Halaman {current} dari {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage(current + 1)}
+                  disabled={current >= totalPages}
+                  className={`cursor-pointer rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 ${FOCUS}`}
+                >
+                  Berikutnya
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Skeleton & error                                                    */
+/* ------------------------------------------------------------------ */
+
+function LaporanSkeleton() {
+  const pulse = "animate-pulse rounded-md bg-slate-200/70 motion-reduce:animate-none";
+  return (
+    <div className="space-y-4" role="status" aria-label="Memuat laporan">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className={`${pulse} h-32`} />
+        ))}
+      </div>
+      <div className={`${pulse} h-10 w-full max-w-md`} />
+      <div className={`${pulse} h-80`} />
+    </div>
+  );
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="rounded-md border border-brand-200 bg-brand-50 px-6 py-10 text-center" role="alert">
+      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-brand-700 shadow-xs">
+        <Icon d={ICON_PATH.alert} className="h-5 w-5" />
+      </div>
+      <p className="text-sm font-bold text-brand-900">Laporan tidak bisa dimuat</p>
+      <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-brand-800">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className={`mt-4 cursor-pointer rounded-md bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 ${FOCUS}`}
+      >
+        Coba lagi
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Halaman                                                             */
+/* ------------------------------------------------------------------ */
+
+interface FetchResult {
+  key: string;
+  data: LaporanData | null;
+  error: string | null;
+}
+
+export default function LaporanPage() {
+  const [month, setMonth] = useState(currentMonthValue());
+  const [reloadKey, setReloadKey] = useState(0);
+  const [result, setResult] = useState<FetchResult>({ key: "", data: null, error: null });
+  const [tab, setTab] = useState<TabId>("ringkasan");
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [printAll, setPrintAll] = useState(false);
+  const [printedAt, setPrintedAt] = useState("");
+
+  // "Loading" diturunkan dari key permintaan, bukan di-set manual di dalam
+  // effect: selama key hasil belum sama dengan key permintaan terbaru, data
+  // lama (kalau ada) tetap tampil redup -- layar tidak berkedip tiap ganti bulan.
+  const requestKey = `${month}#${reloadKey}`;
+  const loading = result.key !== requestKey;
+  const data = result.data;
+
+  useEffect(() => {
+    // Batalkan permintaan lama kalau periode berganti sebelum respons datang,
+    // supaya respons lambat tidak menimpa data periode yang baru dipilih.
+    const controller = new AbortController();
+    fetch(`/api/laporan?month=${month}`, { signal: controller.signal })
+      .then(async (res) => {
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json?.success) {
+          throw new Error(json?.error || `Server mengembalikan status ${res.status}.`);
+        }
+        setResult({ key: requestKey, data: json as LaporanData, error: null });
+      })
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        setResult({
+          key: requestKey,
+          data: null,
+          error: err instanceof Error ? err.message : "Koneksi ke server gagal. Periksa jaringan lalu coba lagi.",
+        });
+      });
+    return () => controller.abort();
+  }, [month, requestKey]);
+
+  useEffect(() => {
+    const selesai = () => setPrintAll(false);
+    window.addEventListener("afterprint", selesai);
+    return () => window.removeEventListener("afterprint", selesai);
+  }, []);
+
+  const handlePrint = () => {
+    // Saat dicetak, semua tab dirender sekaligus supaya laporan tercetak utuh,
+    // bukan hanya tab yang sedang terbuka.
+    setPrintedAt(new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" }));
+    setPrintAll(true);
+    setTimeout(() => window.print(), 600);
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const res = await fetch(`/api/laporan/export?month=${month}`);
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || `Server mengembalikan status ${res.status}.`);
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const match = /filename="?([^";]+)"?/.exec(disposition);
+      const filename = match?.[1] ?? `laporan-stationery-${month}.xlsx`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Gagal mengunduh file Excel.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const prev = data && data.tren.length >= 2 ? data.tren[data.tren.length - 2] : null;
+  const net = data ? data.summary.totalNominalMasuk - data.summary.totalNominalKeluar : 0;
+  const prevNet = prev ? prev.nominalMasuk - prev.nominalKeluar : 0;
+  const jumlahMasuk = data ? data.detailTransaksi.filter((r) => r.tipe === "masuk").length : 0;
+  const jumlahKeluar = data ? data.detailTransaksi.length - jumlahMasuk : 0;
+
+  const tabs: { id: TabId; label: string; count?: number }[] = [
+    { id: "ringkasan", label: "Ringkasan" },
+    { id: "barang", label: "Per barang", count: data?.perItem.length },
+    { id: "departemen", label: "Per departemen", count: data?.perDepartemen.length },
+    { id: "transaksi", label: "Transaksi", count: data?.detailTransaksi.length },
+  ];
+
+  const tampil = (id: TabId) => printAll || tab === id;
+
+  const aksiCls = `inline-flex h-9 cursor-pointer items-center gap-2 rounded-md px-3.5 text-sm font-semibold transition-colors disabled:cursor-wait disabled:opacity-70 ${FOCUS_DARK}`;
+
+  return (
+    <div className="space-y-5">
+      {/* Kop khusus cetak */}
+      <div className="hidden border-b-2 border-slate-900 pb-3 print:block">
+        <h1 className="text-xl font-bold text-slate-900">Laporan Amount In / Out Stationery</h1>
+        <p className="mt-1 text-sm text-slate-700">
+          Periode {data?.periode.label ?? month} &nbsp;|&nbsp; PT Jatim Autocomp Indonesia &nbsp;|&nbsp; Dicetak {printedAt}
+        </p>
+      </div>
+
+      {/* Banner */}
+      <div className="flex flex-col gap-5 rounded-lg border-l-4 border-brand-600 bg-slate-900 p-6 text-white shadow-sm print:hidden lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-xl font-extrabold text-slate-900">Laporan Amount In / Amount Out</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Pembelian (restock) dan pemakaian barang stationery secara periodik, lengkap dengan nominal.
+          <h1 className="text-2xl font-bold tracking-tight">Laporan Amount In / Out</h1>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-300">
+            Pembelian (restock) dan pemakaian barang stationery per bulan, lengkap dengan nominal.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-md p-0.5 text-xs font-bold print:hidden">
+        <div className="flex flex-col gap-3 lg:items-end">
+          <PeriodSwitcher month={month} onChange={setMonth} />
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setView("tabel")}
-              className={`px-3 py-1.5 rounded transition-colors cursor-pointer ${
-                view === "tabel" ? "bg-white text-brand-700 shadow-xs" : "text-slate-500"
-              }`}
+              onClick={handleExport}
+              disabled={exporting}
+              className={`${aksiCls} bg-white text-brand-900 hover:bg-brand-50`}
             >
-              📋 Tabel
+              <Icon d={ICON_PATH.download} />
+              {exporting ? "Menyiapkan file..." : "Unduh Excel"}
             </button>
             <button
               type="button"
-              onClick={() => setView("grafik")}
-              className={`px-3 py-1.5 rounded transition-colors cursor-pointer ${
-                view === "grafik" ? "bg-white text-brand-700 shadow-xs" : "text-slate-500"
-              }`}
+              onClick={handlePrint}
+              disabled={!data || loading}
+              className={`${aksiCls} border border-white/20 bg-white/10 text-white hover:bg-white/20`}
             >
-              📈 Grafik
+              <Icon d={ICON_PATH.printer} />
+              Cetak
             </button>
           </div>
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-700"
-          />
-          <a
-            href={`/api/laporan/export?month=${month}`}
-            className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 rounded-md text-xs transition-all shadow-sm shrink-0 cursor-pointer inline-flex items-center"
-          >
-            📊 Export Excel
-          </a>
         </div>
       </div>
 
-      {loading ? (
-        <div className="py-12 text-center text-xs text-slate-400">Memuat laporan...</div>
+      {exportError && (
+        <div
+          role="alert"
+          className="flex items-start justify-between gap-3 rounded-md border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 print:hidden"
+        >
+          <p>
+            <span className="font-bold">File Excel gagal diunduh.</span> {exportError}
+          </p>
+          <button
+            type="button"
+            onClick={() => setExportError(null)}
+            className={`shrink-0 cursor-pointer rounded text-xs font-semibold text-brand-800 underline underline-offset-2 ${FOCUS}`}
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
+      {!data && loading ? (
+        <LaporanSkeleton />
       ) : !data ? (
-        <div className="py-12 text-center text-xs text-slate-500">Gagal memuat laporan.</div>
+        <ErrorState message={result.error ?? "Terjadi kesalahan yang tidak diketahui."} onRetry={() => setReloadKey((k) => k + 1)} />
       ) : (
-        <>
-          <p className="text-xs text-slate-400 -mt-2">Periode: {data.periode.label}</p>
+        <div
+          aria-busy={loading}
+          className={`space-y-5 transition-opacity motion-reduce:transition-none ${loading ? "pointer-events-none opacity-50" : ""}`}
+        >
+          {/* KPI */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              title="Amount In (restock)"
+              value={rupiah(data.summary.totalNominalMasuk)}
+              sub={`${angka(data.summary.totalQtyMasuk)} unit masuk`}
+              accent={COLOR_MASUK}
+            >
+              {prev && <Delta current={data.summary.totalNominalMasuk} previous={prev.nominalMasuk} prevLabel={prev.label} />}
+            </KpiCard>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white p-5 rounded-md border border-brand-100 shadow-xs">
-              <div className="text-xs font-bold text-brand-600 uppercase tracking-wider">
-                Amount In (Restock/Pembelian)
-              </div>
-              <div className="text-2xl font-black text-brand-700 mt-1">{rupiah(data.summary.totalNominalMasuk)}</div>
-              <div className="text-[11px] text-slate-400 mt-1">{data.summary.totalQtyMasuk} unit masuk</div>
-            </div>
+            <KpiCard
+              title="Amount Out (pemakaian)"
+              value={rupiah(data.summary.totalNominalKeluar)}
+              sub={`${angka(data.summary.totalQtyKeluar)} unit keluar`}
+              accent={COLOR_KELUAR}
+            >
+              {prev && <Delta current={data.summary.totalNominalKeluar} previous={prev.nominalKeluar} prevLabel={prev.label} />}
+            </KpiCard>
 
-            <div className="bg-white p-5 rounded-md border border-rose-100 shadow-xs">
-              <div className="text-xs font-bold text-rose-600 uppercase tracking-wider">Amount Out (Pemakaian)</div>
-              <div className="text-2xl font-black text-rose-700 mt-1">{rupiah(data.summary.totalNominalKeluar)}</div>
-              <div className="text-[11px] text-slate-400 mt-1">{data.summary.totalQtyKeluar} unit keluar</div>
-            </div>
+            <KpiCard
+              title="Selisih (In − Out)"
+              value={rupiah(net)}
+              sub={
+                data.summary.totalNominalMasuk === 0 && data.summary.totalNominalKeluar === 0
+                  ? "Belum ada transaksi"
+                  : net >= 0
+                  ? "Pembelian lebih besar dari pemakaian"
+                  : "Pemakaian lebih besar dari pembelian"
+              }
+              accent="#0f172a"
+            >
+              <SplitBar masuk={data.summary.totalNominalMasuk} keluar={data.summary.totalNominalKeluar} />
+              {prev && <Delta current={net} previous={prevNet} prevLabel={prev.label} />}
+            </KpiCard>
 
-            <div className="bg-white p-5 rounded-md border border-slate-200/80 shadow-xs">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Selisih (In − Out)</div>
-              <div className={`text-2xl font-black mt-1 ${net >= 0 ? "text-slate-900" : "text-rose-700"}`}>
-                {rupiah(net)}
-              </div>
-            </div>
+            <KpiCard
+              title="Jumlah transaksi"
+              value={angka(data.detailTransaksi.length)}
+              sub={`${angka(jumlahMasuk)} restock, ${angka(jumlahKeluar)} pemakaian`}
+              accent="#94a3b8"
+            />
           </div>
 
-          {view === "grafik" ? (
-            <>
-              {/* Tren 6 Bulan Terakhir */}
-              <div className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
-                <div>
-                  <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                    Tren Amount In / Out — 6 Bulan Terakhir
-                  </h2>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Independen dari filter bulan di atas, selalu menampilkan 6 bulan hingga periode yang dipilih.
-                  </p>
-                </div>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.tren} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                      <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={rupiahSingkat} width={48} />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Line type="monotone" dataKey="nominalMasuk" name="Amount In" stroke={COLOR_MASUK} strokeWidth={2} dot={{ r: 3 }} />
-                      <Line
-                        type="monotone"
-                        dataKey="nominalKeluar"
-                        name="Amount Out"
-                        stroke={COLOR_KELUAR}
-                        strokeWidth={2}
-                        strokeDasharray="6 3"
-                        dot={{ r: 3 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Komposisi per Kategori */}
-              <div className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
-                <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                  Komposisi Nominal per Kategori
-                </h2>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.perKategori} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                      <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={rupiahSingkat} width={48} />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Bar dataKey="nominalMasuk" name="Amount In" fill={COLOR_MASUK} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="nominalKeluar" name="Amount Out" fill={COLOR_KELUAR} radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Top Barang Paling Banyak Keluar */}
-              <div className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
-                <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                  Top 8 Barang Paling Banyak Keluar
-                </h2>
-                {data.perItem.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-500">Tidak ada transaksi keluar pada periode ini.</div>
-                ) : (
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={data.perItem.slice(0, 8)}
-                        layout="vertical"
-                        margin={{ top: 8, right: 24, left: 8, bottom: 0 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={rupiahSingkat} />
-                        <YAxis
-                          type="category"
-                          dataKey="nama"
-                          tick={{ fontSize: 11 }}
-                          stroke="#94a3b8"
-                          width={140}
-                        />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Bar dataKey="nominalKeluar" name="Nominal Keluar" fill={COLOR_KELUAR} radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </div>
-
-              {/* Pemakaian per Departemen */}
-              <div className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
-                <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-                  Pemakaian per Departemen
-                </h2>
-                {data.perDepartemen.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-500">Belum ada pemakaian pada periode ini.</div>
-                ) : (
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={data.perDepartemen} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis dataKey="departemen" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                        <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={rupiahSingkat} width={48} />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Bar dataKey="nominalKeluar" name="Nominal Keluar" fill={COLOR_KELUAR} radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-          {/* Per Kategori */}
-          <div className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
-            <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Rekap per Kategori</h2>
-
-            {data.perKategori.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500">
-                Tidak ada transaksi stok pada periode ini.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
-                    <tr>
-                      <th className="py-3 px-4">Kategori</th>
-                      <th className="py-3 px-4">Qty Masuk</th>
-                      <th className="py-3 px-4">Nominal Masuk</th>
-                      <th className="py-3 px-4">Qty Keluar</th>
-                      <th className="py-3 px-4">Nominal Keluar</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                    {data.perKategori.map((k) => (
-                      <tr key={k.kategori} className="hover:bg-slate-50/80">
-                        <td className="py-3 px-4 font-bold text-slate-900">{k.label}</td>
-                        <td className="py-3 px-4 text-brand-700">{k.qtyMasuk}</td>
-                        <td className="py-3 px-4 text-brand-700">{rupiah(k.nominalMasuk)}</td>
-                        <td className="py-3 px-4 text-rose-700">{k.qtyKeluar}</td>
-                        <td className="py-3 px-4 text-rose-700">{rupiah(k.nominalKeluar)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Per Item */}
-          <div className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
-            <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-              Detail Amount In / Out per Barang
-            </h2>
-
-            {data.perItem.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500">
-                Tidak ada transaksi stok pada periode ini.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
-                    <tr>
-                      <th className="py-3 px-4">Nama Barang</th>
-                      <th className="py-3 px-4">Harga Satuan</th>
-                      <th className="py-3 px-4">Qty Masuk</th>
-                      <th className="py-3 px-4">Nominal Masuk</th>
-                      <th className="py-3 px-4">Qty Keluar</th>
-                      <th className="py-3 px-4">Nominal Keluar</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                    {data.perItem.map((it) => (
-                      <Fragment key={it.itemId}>
-                        <tr className="hover:bg-slate-50/80">
-                          <td className="py-3 px-4 font-bold text-slate-900">{it.nama}</td>
-                          <td className="py-3 px-4">
-                            {it.hargaMin === it.hargaMax ? (
-                              rupiah(it.hargaMin)
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5">
-                                <span>
-                                  {rupiah(it.hargaMin)} – {rupiah(it.hargaMax)}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setExpandedItemId(expandedItemId === it.itemId ? null : it.itemId)}
-                                  title="Klik untuk lihat rincian tiap harga"
-                                  className="text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded cursor-pointer"
-                                >
-                                  Berubah {expandedItemId === it.itemId ? "▲" : "▼"}
-                                </button>
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-brand-700">
-                            {it.qtyMasuk} {it.satuan}
-                          </td>
-                          <td className="py-3 px-4 text-brand-700">{rupiah(it.nominalMasuk)}</td>
-                          <td className="py-3 px-4 text-rose-700">
-                            {it.qtyKeluar} {it.satuan}
-                          </td>
-                          <td className="py-3 px-4 text-rose-700">{rupiah(it.nominalKeluar)}</td>
-                        </tr>
-                        {expandedItemId === it.itemId && (
-                          <tr>
-                            <td colSpan={6} className="bg-amber-50/50 px-4 py-3">
-                              <p className="text-[11px] font-bold text-amber-900 uppercase tracking-wider mb-2">
-                                Rincian per harga — {it.nama}
-                              </p>
-                              <table className="w-full text-[11px]">
-                                <thead className="text-slate-400 font-bold uppercase">
-                                  <tr>
-                                    <th className="text-left py-1.5 px-2">Harga</th>
-                                    <th className="text-left py-1.5 px-2">Qty Masuk</th>
-                                    <th className="text-left py-1.5 px-2">Nominal Masuk</th>
-                                    <th className="text-left py-1.5 px-2">Qty Keluar</th>
-                                    <th className="text-left py-1.5 px-2">Nominal Keluar</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {it.breakdown.map((b) => (
-                                    <tr key={b.harga} className="border-t border-amber-100">
-                                      <td className="py-1.5 px-2 font-bold text-slate-800">{rupiah(b.harga)}</td>
-                                      <td className="py-1.5 px-2 text-brand-700">
-                                        {b.qtyMasuk > 0 ? `${b.qtyMasuk} ${it.satuan}` : "-"}
-                                      </td>
-                                      <td className="py-1.5 px-2 text-brand-700">
-                                        {b.qtyMasuk > 0 ? rupiah(b.nominalMasuk) : "-"}
-                                      </td>
-                                      <td className="py-1.5 px-2 text-rose-700">
-                                        {b.qtyKeluar > 0 ? `${b.qtyKeluar} ${it.satuan}` : "-"}
-                                      </td>
-                                      <td className="py-1.5 px-2 text-rose-700">
-                                        {b.qtyKeluar > 0 ? rupiah(b.nominalKeluar) : "-"}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Per Departemen */}
-          <div className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
-            <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-              Rekapitulasi Pemakaian per Departemen
-            </h2>
-            <p className="text-[11px] text-slate-400 -mt-2">
-              Hanya mencakup transaksi keluar (restock/pembelian tidak terikat departemen tertentu).
-            </p>
-
-            {data.perDepartemen.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500">Belum ada pemakaian pada periode ini.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
-                    <tr>
-                      <th className="py-3 px-4">Departemen</th>
-                      <th className="py-3 px-4">Total Qty Diambil</th>
-                      <th className="py-3 px-4">Total Nominal</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                    {data.perDepartemen.map((d) => (
-                      <tr key={d.departemen} className="hover:bg-slate-50/80">
-                        <td className="py-3 px-4 font-bold text-slate-900">{d.departemen}</td>
-                        <td className="py-3 px-4">{d.qtyKeluar} unit</td>
-                        <td className="py-3 px-4 font-extrabold text-rose-700">{rupiah(d.nominalKeluar)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Detail Transaksi */}
-          <div className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Detail Transaksi</h2>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Riwayat tiap transaksi stok pada periode ini, lengkap dengan pengajuan & pemohon (khusus barang keluar).
-                </p>
-              </div>
-              <div className="flex items-center gap-2 print:hidden">
-                <select
-                  value={detailTipeFilter}
-                  onChange={(e) => setDetailTipeFilter(e.target.value as "semua" | "masuk" | "keluar")}
-                  className="bg-slate-50 border border-slate-200 rounded-md px-2 py-2 text-xs font-bold text-slate-700"
+          {/* Tab */}
+          <div role="tablist" aria-label="Bagian laporan" className="flex gap-1 overflow-x-auto border-b border-slate-200 print:hidden">
+            {tabs.map((t) => {
+              const aktif = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  id={`tab-${t.id}`}
+                  aria-selected={aktif}
+                  aria-controls={`panel-${t.id}`}
+                  onClick={() => setTab(t.id)}
+                  className={`-mb-px flex shrink-0 cursor-pointer items-center whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${FOCUS} ${
+                    aktif
+                      ? "border-brand-600 text-slate-900"
+                      : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800"
+                  }`}
                 >
-                  <option value="semua">Semua Tipe</option>
-                  <option value="masuk">Masuk</option>
-                  <option value="keluar">Keluar</option>
-                </select>
-                <input
-                  type="text"
-                  value={detailSearch}
-                  onChange={(e) => setDetailSearch(e.target.value)}
-                  placeholder="Cari barang, no. pengajuan, departemen, pemohon..."
-                  className="bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs text-slate-700 w-64"
-                />
-              </div>
-            </div>
+                  {t.label}
+                  {t.count !== undefined && (
+                    <span
+                      className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${
+                        aktif ? "bg-brand-50 text-brand-700" : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {angka(t.count)}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-            {filteredDetail.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500">
-                {data.detailTransaksi.length === 0
-                  ? "Tidak ada transaksi stok pada periode ini."
-                  : "Tidak ada transaksi yang cocok dengan pencarian."}
+          {/* Panel. key={periode} mereset filter/urutan/halaman tiap ganti bulan. */}
+          <div className="space-y-5">
+            {tampil("ringkasan") && (
+              <div role="tabpanel" id="panel-ringkasan" aria-labelledby="tab-ringkasan">
+                <TabRingkasan key={data.periode.label} data={data} />
               </div>
-            ) : (
-              <div className="overflow-x-auto max-h-[480px] overflow-y-auto print:max-h-none print:overflow-visible">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100 sticky top-0 print:static">
-                    <tr>
-                      <th className="py-3 px-4">Tanggal</th>
-                      <th className="py-3 px-4">Tipe</th>
-                      <th className="py-3 px-4">Barang</th>
-                      <th className="py-3 px-4">Qty</th>
-                      <th className="py-3 px-4">Nominal</th>
-                      <th className="py-3 px-4">No. Pengajuan</th>
-                      <th className="py-3 px-4">Departemen</th>
-                      <th className="py-3 px-4">Pemohon</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                    {filteredDetail.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50/80">
-                        <td className="py-3 px-4 whitespace-nowrap text-slate-500">{tanggalPendek(row.tanggal)}</td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                              row.tipe === "masuk" ? "bg-brand-50 text-brand-700" : "bg-rose-50 text-rose-700"
-                            }`}
-                          >
-                            {row.tipe}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-bold text-slate-900">{row.itemNama}</td>
-                        <td className="py-3 px-4">
-                          {row.qty} {row.satuan}
-                        </td>
-                        <td className={`py-3 px-4 font-bold ${row.tipe === "masuk" ? "text-brand-700" : "text-rose-700"}`}>
-                          {rupiah(row.nominal)}
-                        </td>
-                        <td className="py-3 px-4 text-slate-500">{row.noPengajuan ?? "-"}</td>
-                        <td className="py-3 px-4 text-slate-500">{row.departemen ?? "-"}</td>
-                        <td className="py-3 px-4 text-slate-500">{row.pemohon ?? "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            )}
+            {tampil("barang") && (
+              <div role="tabpanel" id="panel-barang" aria-labelledby="tab-barang">
+                <TabBarang key={data.periode.label} data={data} />
+              </div>
+            )}
+            {tampil("departemen") && (
+              <div role="tabpanel" id="panel-departemen" aria-labelledby="tab-departemen">
+                <TabDepartemen key={data.periode.label} data={data} />
+              </div>
+            )}
+            {tampil("transaksi") && (
+              <div role="tabpanel" id="panel-transaksi" aria-labelledby="tab-transaksi">
+                <TabTransaksi key={data.periode.label} data={data} showAll={printAll} />
               </div>
             )}
           </div>
-            </>
-          )}
-        </>
+        </div>
       )}
     </div>
   );

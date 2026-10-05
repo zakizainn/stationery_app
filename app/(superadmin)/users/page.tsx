@@ -176,7 +176,7 @@ export default function UsersManagementPage() {
 
         <button
           onClick={openCreateModal}
-          className="bg-purple-700 hover:bg-purple-800 text-white font-bold px-5 py-2.5 rounded-md shadow-sm transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+          className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 rounded-md shadow-sm transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
         >
           + Tambah Pengguna Baru
         </button>
@@ -341,7 +341,7 @@ export default function UsersManagementPage() {
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs py-2.5 rounded-md shadow-sm cursor-pointer"
+                className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md shadow-sm cursor-pointer"
               >
                 Simpan User
               </button>

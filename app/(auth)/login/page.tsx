@@ -38,6 +38,8 @@ function LoginForm() {
     router.refresh();
   }
 
+  const showDemoLogin = process.env.NODE_ENV !== "production";
+
   const demoAccounts = [
     { label: "Staf (QA)", nik: "22071", pass: "password123", badge: "bg-brand-100 text-brand-800" },
     { label: "Atasan (QA)", nik: "11769", pass: "password123", badge: "bg-blue-100 text-blue-800" },
@@ -117,32 +119,34 @@ function LoginForm() {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-100">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center mb-3">
-            Quick Demo Login (Uji Coba 1-Klik)
+        {showDemoLogin && (
+          <div className="mt-8 pt-6 border-t border-slate-100">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center mb-3">
+              Quick Demo Login (Uji Coba 1-Klik)
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {demoAccounts.map((acc) => (
+                <button
+                  key={acc.nik}
+                  type="button"
+                  onClick={() => {
+                    setNik(acc.nik);
+                    setPassword(acc.pass);
+                    handleSubmit(undefined, acc.nik, acc.pass);
+                  }}
+                  className="p-2.5 rounded-md border border-slate-200/80 hover:border-brand-500 text-left transition-all bg-slate-50/50 hover:bg-brand-50/30 group cursor-pointer"
+                >
+                  <div className="text-xs font-bold text-slate-800 group-hover:text-brand-700">
+                    {acc.label}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    NIK: <span className="font-mono">{acc.nik}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {demoAccounts.map((acc) => (
-              <button
-                key={acc.nik}
-                type="button"
-                onClick={() => {
-                  setNik(acc.nik);
-                  setPassword(acc.pass);
-                  handleSubmit(undefined, acc.nik, acc.pass);
-                }}
-                className={`p-2.5 rounded-md border border-slate-200/80 hover:border-brand-500 text-left transition-all bg-slate-50/50 hover:bg-brand-50/30 group cursor-pointer`}
-              >
-                <div className="text-xs font-bold text-slate-800 group-hover:text-brand-700">
-                  {acc.label}
-                </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
-                  NIK: <span className="font-mono">{acc.nik}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
