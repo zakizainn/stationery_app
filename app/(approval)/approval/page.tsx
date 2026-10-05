@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { getKategoriLabel } from "@/lib/kategori";
 
 export default function ApprovalPage() {
   const { data: session } = useSession();
@@ -108,11 +109,13 @@ export default function ApprovalPage() {
               className="bg-white rounded-md border border-slate-200/80 border-l-[3px] border-l-amber-400 p-5 space-y-4 shadow-xs"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-md bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-xs text-center leading-tight">
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* Lebar mengikuti isi (bukan kotak tetap) supaya nomor seperti
+                      "002/X/2026" tidak meluber menimpa nama pemohon. */}
+                  <div className="shrink-0 whitespace-nowrap rounded-md border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-xs font-bold tabular-nums text-slate-700">
                     #{req.noPengajuan}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="font-bold text-slate-900 text-sm">
                       {req.user?.nama} <span className="text-slate-400 font-normal">({req.user?.nik})</span>
                     </h3>
@@ -123,8 +126,8 @@ export default function ApprovalPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-md text-xs font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
-                    Tipe: {req.tipe}
+                  <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                    Tipe: {req.tipe === "rutin" ? "Order Rutin" : "Order Baru"}
                   </span>
                 </div>
               </div>
@@ -146,9 +149,11 @@ export default function ApprovalPage() {
                     <div key={it.id} className="p-3 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <span className="font-bold text-slate-800 text-sm">{it.item?.nama}</span>
-                        <span className="ml-2 text-[11px] uppercase font-bold text-slate-400">
-                          ({it.item?.kategori})
-                        </span>
+                        {it.item?.kategori && (
+                          <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-500 align-middle">
+                            {getKategoriLabel(it.item.kategori)}
+                          </span>
+                        )}
 
                         {it.penggunaan && (
                           <div className="text-slate-500 italic mt-0.5">Tujuan: "{it.penggunaan}"</div>
