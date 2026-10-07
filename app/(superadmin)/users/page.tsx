@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { STATUS_TONE } from "@/lib/status";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 interface User {
   id: number;
@@ -158,9 +160,9 @@ export default function UsersManagementPage() {
 
   const ROLE_BADGES: Record<string, string> = {
     staf: "bg-brand-50 text-brand-800 border-brand-200",
-    atasan_departemen: "bg-blue-50 text-blue-800 border-blue-200",
+    atasan_departemen: "bg-slate-100 text-slate-700 border-slate-300",
     admin_stationery: "bg-amber-50 text-amber-900 border-amber-200",
-    superadmin: "bg-purple-50 text-purple-800 border-purple-200",
+    superadmin: "bg-slate-900 text-white border-slate-900",
   };
 
   return (
@@ -176,7 +178,7 @@ export default function UsersManagementPage() {
 
         <button
           onClick={openCreateModal}
-          className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 rounded-md shadow-sm transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+          className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 rounded-md shadow-xs transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
         >
           + Tambah Pengguna Baru
         </button>
@@ -185,11 +187,11 @@ export default function UsersManagementPage() {
       {/* Users Table */}
       <div className="bg-white rounded-md border border-slate-200/80 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="py-12 text-center text-xs text-slate-400">Memuat data pengguna...</div>
+          <TableSkeleton label="Memuat data pengguna..." rows={6} cols={6} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
+              <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4">NIK</th>
                   <th className="py-3.5 px-4">Nama Pengguna</th>
@@ -205,14 +207,14 @@ export default function UsersManagementPage() {
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{u.nik}</td>
                     <td className="py-3.5 px-4 font-bold text-slate-800">{u.nama}</td>
                     <td className="py-3.5 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${ROLE_BADGES[u.role] || "bg-slate-100"}`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${ROLE_BADGES[u.role] || "bg-slate-100"}`}>
                         {u.role}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-slate-600">{u.departemen?.nama} ({u.departemen?.kode})</td>
                     <td className="py-3.5 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        u.aktif ? "bg-brand-50 text-brand-800 border-brand-200" : "bg-slate-100 text-slate-500 border-slate-200"
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                        u.aktif ? STATUS_TONE.sukses : "bg-slate-100 text-slate-600 border-slate-200"
                       }`}>
                         {u.aktif ? "Aktif" : "Nonaktif"}
                       </span>
@@ -242,12 +244,12 @@ export default function UsersManagementPage() {
       {/* Modal Add/Edit */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <form onSubmit={handleSave} className="bg-white rounded-lg p-6 w-full max-w-md shadow-sm border border-slate-200 space-y-4">
+          <form onSubmit={handleSave} className="bg-white rounded-lg p-6 w-full max-w-md shadow-md border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="font-extrabold text-slate-900 text-base">
                 {editingUser ? `Edit User (${editingUser.nik})` : "Tambah User Baru"}
               </h2>
-              <button type="button" onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold">
+              <button type="button" onClick={() => setModalOpen(false)} className="text-slate-500 hover:text-slate-600 font-bold">
                 ✕
               </button>
             </div>
@@ -341,7 +343,7 @@ export default function UsersManagementPage() {
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md shadow-sm cursor-pointer"
+                className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md shadow-xs cursor-pointer"
               >
                 Simpan User
               </button>

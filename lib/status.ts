@@ -3,6 +3,19 @@ export interface StatusBadge {
   style: string;
 }
 
+// Satu-satunya tempat warna status didefinisikan. Merah brand sengaja TIDAK
+// dipakai untuk status (merah brand = aksi utama & menu aktif), supaya
+// "tersedia/disetujui" tidak terbaca mirip "ditolak/habis". Ungu dihapus:
+// "selesai" memakai netral karena itu keadaan akhir, bukan peringatan.
+export const STATUS_TONE = {
+  menunggu: "bg-amber-50 text-amber-800 border-amber-200",
+  proses: "bg-blue-50 text-blue-800 border-blue-200",
+  sukses: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  bahaya: "bg-rose-50 text-rose-800 border-rose-200",
+  selesai: "bg-slate-100 text-slate-700 border-slate-300",
+  netral: "bg-slate-100 text-slate-700 border-slate-200",
+} as const;
+
 interface ApprovalLike {
   level: number;
   status: "pending" | "approved" | "rejected" | string;
@@ -39,7 +52,7 @@ export function getStatusBadge(request: RequestLike): StatusBadge {
 
   if (tipe === "rutin") {
     if (status === "approved") {
-      return { label: "Menunggu Diproses Admin", style: "bg-blue-50 text-blue-700 border-blue-200" };
+      return { label: "Menunggu Diproses Admin", style: STATUS_TONE.proses };
     }
   } else {
     // order_baru
@@ -47,13 +60,13 @@ export function getStatusBadge(request: RequestLike): StatusBadge {
       if (!level1 || level1.status === "pending") {
         return {
           label: "Menunggu Approval Atasan Departemen",
-          style: "bg-amber-50 text-amber-700 border-amber-200",
+          style: STATUS_TONE.menunggu,
         };
       }
       if (level1.status === "approved" && (!level2 || level2.status === "pending")) {
         return {
           label: "Menunggu Approval Superadmin",
-          style: "bg-amber-50 text-amber-700 border-amber-200",
+          style: STATUS_TONE.menunggu,
         };
       }
     }
@@ -61,28 +74,28 @@ export function getStatusBadge(request: RequestLike): StatusBadge {
     if (status === "rejected") {
       const rejectedAt = approvals.find((a) => a.status === "rejected");
       if (rejectedAt?.level === 1) {
-        return { label: "Ditolak Atasan Departemen", style: "bg-rose-50 text-rose-700 border-rose-200" };
+        return { label: "Ditolak Atasan Departemen", style: STATUS_TONE.bahaya };
       }
       if (rejectedAt?.level === 2) {
-        return { label: "Ditolak Superadmin", style: "bg-rose-50 text-rose-700 border-rose-200" };
+        return { label: "Ditolak Superadmin", style: STATUS_TONE.bahaya };
       }
     }
 
     if (status === "approved") {
       return {
-        label: "Disetujui — Siap Diproses Admin",
-        style: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        label: "Disetujui, Siap Diproses Admin",
+        style: STATUS_TONE.sukses,
       };
     }
   }
 
   const FALLBACK: Record<string, StatusBadge> = {
-    pending: { label: "Menunggu Approval", style: "bg-amber-50 text-amber-700 border-amber-200" },
-    approved: { label: "Disetujui", style: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-    rejected: { label: "Ditolak", style: "bg-rose-50 text-rose-700 border-rose-200" },
-    diproses: { label: "Sedang Diproses", style: "bg-blue-50 text-blue-700 border-blue-200" },
-    selesai: { label: "Selesai / Diambil", style: "bg-purple-50 text-purple-700 border-purple-200" },
+    pending: { label: "Menunggu Approval", style: STATUS_TONE.menunggu },
+    approved: { label: "Disetujui", style: STATUS_TONE.sukses },
+    rejected: { label: "Ditolak", style: STATUS_TONE.bahaya },
+    diproses: { label: "Sedang Diproses", style: STATUS_TONE.proses },
+    selesai: { label: "Selesai / Diambil", style: STATUS_TONE.selesai },
   };
 
-  return FALLBACK[status] || { label: status, style: "bg-slate-100 text-slate-700 border-slate-200" };
+  return FALLBACK[status] || { label: status, style: STATUS_TONE.netral };
 }

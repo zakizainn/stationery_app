@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { getKategoriLabel } from "@/lib/kategori";
+import { STATUS_TONE } from "@/lib/status";
+import { ArrowsLeftRight, Check, Info, MagnifyingGlass, ShoppingCart } from "@phosphor-icons/react";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingRegion, Skeleton } from "@/components/ui/Skeleton";
 
 interface Item {
   id: number;
@@ -149,10 +153,8 @@ export default function KatalogPage() {
     <div className="space-y-6">
       {/* Toast notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-md shadow-sm text-xs font-bold flex items-center gap-3 animate-fade-in border border-slate-700">
-          <svg className="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-          </svg>
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-md shadow-md text-xs font-bold flex items-center gap-3 animate-fade-in border border-slate-700">
+          <Check size={20} className="text-emerald-400" aria-hidden="true" />
           {toastMessage}
         </div>
       )}
@@ -171,14 +173,12 @@ export default function KatalogPage() {
         {canOrder && (
           <Link
             href="/keranjang"
-            className="relative inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 rounded-md shadow-sm transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+            className="relative inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 active:scale-[0.98] text-white font-bold px-5 py-2.5 rounded-md shadow-xs transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
-            </svg>
+            <ShoppingCart size={16} aria-hidden="true" />
             Lihat Keranjang
             {cartCount > 0 && (
-              <span className="ml-1 bg-white text-brand-800 rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow-xs">
+              <span className="ml-1 bg-white text-brand-800 rounded-full w-5 h-5 flex items-center justify-center text-xs font-black shadow-xs">
                 {cartCount}
               </span>
             )}
@@ -188,9 +188,7 @@ export default function KatalogPage() {
 
       {!canOrder && (
         <div className="p-4 rounded-md bg-blue-50 border border-blue-200 text-blue-800 text-xs font-medium flex items-start gap-2">
-          <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <Info size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
           Sebagai Atasan Departemen, Anda tidak dapat mengajukan order sendiri. Silakan minta staf departemen Anda untuk mengajukan kebutuhan ATK melalui menu Katalog &amp; Keranjang mereka.
         </div>
       )}
@@ -205,9 +203,7 @@ export default function KatalogPage() {
             placeholder="Cari nama barang... (misal: Pulpen, Kertas HVS)"
             className="w-full bg-white border border-slate-200/80 rounded-md px-4 py-2.5 pl-10 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-xs"
           />
-          <svg className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <MagnifyingGlass size={16} className="text-slate-500 absolute left-3.5 top-3" aria-hidden="true" />
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
@@ -235,11 +231,22 @@ export default function KatalogPage() {
 
       {/* Items Grid */}
       {loading ? (
-        <div className="py-16 text-center text-xs text-slate-400">Memuat data barang...</div>
+        <LoadingRegion
+          label="Memuat data barang..."
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        >
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-md border border-slate-200/80 p-5 space-y-3">
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-5 w-32 rounded-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          ))}
+        </LoadingRegion>
       ) : items.length === 0 ? (
-        <div className="py-16 text-center bg-white rounded-md border border-dashed border-slate-200">
-          <p className="text-xs text-slate-500 font-medium">Tidak ada barang yang sesuai pencarian atau filter.</p>
-        </div>
+        <EmptyState icon={MagnifyingGlass} judul="Tidak ada barang yang sesuai pencarian atau filter." />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {items.map((item) => {
@@ -253,7 +260,7 @@ export default function KatalogPage() {
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-3">
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                    <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
                       {getKategoriLabel(item.kategori)}
                     </span>
                   </div>
@@ -264,32 +271,30 @@ export default function KatalogPage() {
 
                   <div className="mt-3 flex items-center gap-2">
                     {isOutOfStock ? (
-                      <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold">
+                      <span className={`px-2.5 py-0.5 rounded-full border text-xs font-bold ${STATUS_TONE.bahaya}`}>
                         Stok Habis (0 {item.satuan})
                       </span>
                     ) : isLowStock ? (
-                      <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">
+                      <span className={`px-2.5 py-0.5 rounded-full border text-xs font-bold ${STATUS_TONE.menunggu}`}>
                         Stok Menipis ({item.stok} {item.satuan})
                       </span>
                     ) : (
-                      <span className="px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200 text-[10px] font-bold">
+                      <span className={`px-2.5 py-0.5 rounded-full border text-xs font-bold ${STATUS_TONE.sukses}`}>
                         Tersedia ({item.stok} {item.satuan})
                       </span>
                     )}
                   </div>
 
                   {item.bisaDitukar && (
-                    <div className="mt-2 text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-1 rounded-md border border-purple-200/60 inline-flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                      </svg>
+                    <div className="mt-2 text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-md border border-slate-200 inline-flex items-center gap-1">
+                      <ArrowsLeftRight size={12} aria-hidden="true" />
                       Bisa tukar barang lama
                     </div>
                   )}
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-xs text-slate-400 font-medium">Satuan: {item.satuan}</span>
+                  <span className="text-xs text-slate-500 font-medium">Satuan: {item.satuan}</span>
                   {canOrder && (
                     <button
                       onClick={() => {
@@ -329,12 +334,12 @@ export default function KatalogPage() {
       {/* Modal Add to Cart */}
       {activeItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-sm border border-slate-200">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-md border border-slate-200">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <h2 className="font-extrabold text-slate-900 text-base">Tambah ke Keranjang</h2>
               <button
                 onClick={() => setActiveItem(null)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                className="text-slate-500 hover:text-slate-600 text-sm font-bold"
               >
                 ✕
               </button>
@@ -342,7 +347,7 @@ export default function KatalogPage() {
 
             <div className="space-y-4">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
                   {getKategoriLabel(activeItem.kategori)}
                 </span>
                 <h3 className="font-bold text-slate-900 text-base mt-1">{activeItem.nama}</h3>
@@ -397,13 +402,13 @@ export default function KatalogPage() {
               )}
 
               {activeItem.bisaDitukar && (
-                <div className="p-3 bg-purple-50 rounded-md border border-purple-200">
-                  <label className="block text-xs font-bold text-purple-900 uppercase tracking-wider mb-1">
+                <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
+                  <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">
                     Penukaran Barang Lama (Wajib)
                   </label>
-                  <p className="text-[11px] text-purple-700">
+                  <p className="text-xs text-slate-700">
                     Item ini wajib ditukar dengan <strong>{activeItem.nama}</strong> lama milik kamu saat
-                    pengambilan barang baru — bukan barang lain.
+                    pengambilan barang baru, bukan barang lain.
                   </p>
                 </div>
               )}
@@ -419,7 +424,7 @@ export default function KatalogPage() {
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md shadow-sm transition-all cursor-pointer"
+                  className="flex-1 bg-brand-700 hover:bg-brand-800 active:scale-[0.98] text-white font-bold text-xs py-2.5 rounded-md shadow-xs transition-all cursor-pointer"
                 >
                   Simpan ke Keranjang
                 </button>

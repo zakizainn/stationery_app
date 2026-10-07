@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getKategoriLabel } from "@/lib/kategori";
+import { ShoppingCart, Trash } from "@phosphor-icons/react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface CartItem {
   itemId: number;
@@ -125,23 +127,12 @@ export default function KeranjangPage() {
       </div>
 
       {cart.length === 0 ? (
-        <div className="py-16 text-center bg-white rounded-md border border-dashed border-slate-200 p-8">
-          <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
-            </svg>
-          </div>
-          <h3 className="font-bold text-slate-800 text-sm">Keranjang Anda Masih Kosong</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-            Anda belum menambahkan barang stationery ke dalam keranjang.
-          </p>
-          <Link
-            href="/katalog"
-            className="inline-block mt-4 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-5 py-2.5 rounded-md shadow-sm transition-all"
-          >
-            Buka Katalog Barang
-          </Link>
-        </div>
+        <EmptyState
+          icon={ShoppingCart}
+          judul="Keranjang Anda Masih Kosong"
+          deskripsi="Anda belum menambahkan barang stationery ke dalam keranjang."
+          aksi={{ label: "Buka Katalog Barang", href: "/katalog" }}
+        />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Cart items list */}
@@ -167,11 +158,11 @@ export default function KeranjangPage() {
                   <div key={item.itemId} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                        <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
                           {getKategoriLabel(item.kategori)}
                         </span>
                         {item.itemLamaId && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
                             Tukar Barang
                           </span>
                         )}
@@ -214,12 +205,10 @@ export default function KeranjangPage() {
                       <button
                         type="button"
                         onClick={() => removeItem(item.itemId)}
-                        className="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                        className="text-slate-500 hover:text-rose-600 transition-colors p-1"
                         title="Hapus barang"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        <Trash size={20} aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -250,7 +239,7 @@ export default function KeranjangPage() {
                     }`}
                   >
                     <div className="text-xs">Rutin</div>
-                    <div className="text-[10px] opacity-75 font-normal">Langsung ke Admin Stationery (Tanpa Approval Atasan)</div>
+                    <div className="text-xs opacity-75 font-normal">Langsung ke Admin Stationery (Tanpa Approval Atasan)</div>
                   </button>
 
                   <button
@@ -263,7 +252,7 @@ export default function KeranjangPage() {
                     }`}
                   >
                     <div className="text-xs">Order Baru</div>
-                    <div className="text-[10px] opacity-75 font-normal">Perlu Approval Atasan Departemen</div>
+                    <div className="text-xs opacity-75 font-normal">Perlu Approval Atasan Departemen</div>
                   </button>
                 </div>
               </div>
@@ -290,7 +279,7 @@ export default function KeranjangPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-md shadow-sm shadow-brand-700/20 transition-all text-xs disabled:opacity-60 cursor-pointer"
+                className="w-full bg-brand-700 hover:bg-brand-800 active:scale-[0.98] text-white font-bold py-3 rounded-md shadow-xs shadow-brand-700/20 transition-all text-xs disabled:opacity-60 cursor-pointer"
               >
                 {loading ? "Mengirim Pengajuan..." : "Kirim Pengajuan Sekarang"}
               </button>

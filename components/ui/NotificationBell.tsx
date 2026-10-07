@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Bell } from "@phosphor-icons/react";
 
 interface NotificationItem {
   id: number;
@@ -79,28 +80,22 @@ export function NotificationBell() {
         className="relative w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200/80 text-slate-500 hover:text-slate-800 hover:border-slate-300 transition-all cursor-pointer"
         aria-label="Notifikasi"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4.5 h-4.5">
-          <path
-            fillRule="evenodd"
-            d="M5.25 9a6.75 6.75 0 0113.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 01-.297 1.206c-1.544.57-3.16.99-4.831 1.243a3.75 3.75 0 11-7.48 0 24.585 24.585 0 01-4.831-1.244.75.75 0 01-.298-1.205A8.217 8.217 0 005.25 9.75V9zm4.502 8.9a2.25 2.25 0 104.496 0 25.057 25.057 0 01-4.496 0z"
-            clipRule="evenodd"
-          />
-        </svg>
+        <Bell size={18} aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-xs font-bold flex items-center justify-center border-2 border-white">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white rounded-md border border-slate-200 shadow-sm z-50 animate-fade-in">
+        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white rounded-md border border-slate-200 shadow-md z-50 animate-fade-in">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 sticky top-0 bg-white">
             <span className="font-bold text-slate-900 text-xs">Notifikasi</span>
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-[10px] font-bold text-brand-700 hover:text-brand-900 cursor-pointer"
+                className="text-xs font-bold text-brand-700 hover:text-brand-900 cursor-pointer"
               >
                 Tandai semua dibaca
               </button>
@@ -108,7 +103,7 @@ export function NotificationBell() {
           </div>
 
           {notifications.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-400">Belum ada notifikasi.</div>
+            <div className="py-8 text-center text-xs text-slate-500">Belum ada notifikasi.</div>
           ) : (
             <div className="divide-y divide-slate-100">
               {notifications.map((n) => (
@@ -123,7 +118,7 @@ export function NotificationBell() {
                     {!n.dibaca && <span className="mt-1 w-1.5 h-1.5 rounded-full bg-brand-600 shrink-0" />}
                     <div>
                       <p className="leading-snug">{n.pesan}</p>
-                      <p className="text-[10px] text-slate-400 mt-1">
+                      <p className="text-xs text-slate-500 mt-1">
                         {new Date(n.tanggal).toLocaleString("id-ID", {
                           day: "2-digit",
                           month: "short",

@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArrowsClockwise, Check } from "@phosphor-icons/react";
+import { STATUS_TONE } from "@/lib/status";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 export default function RestockPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -113,8 +117,9 @@ export default function RestockPage() {
             </h3>
 
             {msg && (
-              <div className="p-3 rounded-md bg-brand-50 border border-brand-200 text-brand-800 text-xs font-bold">
-                ✓ {msg}
+              <div className={`p-3 rounded-md border text-xs font-bold flex items-center gap-2 ${STATUS_TONE.sukses}`}>
+                <Check size={14} className="shrink-0" aria-hidden="true" />
+                {msg}
               </div>
             )}
 
@@ -139,9 +144,9 @@ export default function RestockPage() {
               />
 
               {dropdownOpen && (
-                <div className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-sm">
+                <div className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-md">
                   {filteredItems.length === 0 ? (
-                    <div className="px-3 py-2.5 text-xs text-slate-400">Tidak ada barang yang cocok.</div>
+                    <div className="px-3 py-2.5 text-xs text-slate-500">Tidak ada barang yang cocok.</div>
                   ) : (
                     filteredItems.map((i) => (
                       <button
@@ -155,7 +160,7 @@ export default function RestockPage() {
                         className="w-full text-left px-3 py-2.5 text-xs font-semibold text-slate-800 hover:bg-brand-50 cursor-pointer border-b border-slate-50 last:border-0"
                       >
                         {i.nama}{" "}
-                        <span className="text-slate-400 font-normal">
+                        <span className="text-slate-500 font-normal">
                           (Stok Saat Ini: {i.stok} {i.satuan})
                         </span>
                       </button>
@@ -182,7 +187,7 @@ export default function RestockPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-md shadow-sm transition-all text-xs disabled:opacity-60 cursor-pointer"
+              className="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-md shadow-xs transition-all text-xs disabled:opacity-60 cursor-pointer"
             >
               {submitting ? "Menyimpan Restock..." : "Tambah Stok Barang"}
             </button>
@@ -196,13 +201,13 @@ export default function RestockPage() {
           </h3>
 
           {loading ? (
-            <div className="py-12 text-center text-xs text-slate-400">Memuat log pergerakan stok...</div>
+            <TableSkeleton label="Memuat log pergerakan stok..." rows={6} cols={5} />
           ) : movements.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-500">Belum ada catatan pergerakan stok.</div>
+            <EmptyState icon={ArrowsClockwise} judul="Belum ada catatan pergerakan stok." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
+                <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
                   <tr>
                     <th className="py-3 px-3">Waktu</th>
                     <th className="py-3 px-3">Tipe</th>
@@ -214,7 +219,7 @@ export default function RestockPage() {
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                   {movements.map((m) => (
                     <tr key={m.id} className="hover:bg-slate-50/80">
-                      <td className="py-3 px-3 text-slate-400">
+                      <td className="py-3 px-3 text-slate-500">
                         {new Date(m.tanggal).toLocaleDateString("id-ID", {
                           day: "numeric",
                           month: "short",
@@ -223,7 +228,7 @@ export default function RestockPage() {
                         })}
                       </td>
                       <td className="py-3 px-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        <span className={`px-2 py-0.5 rounded-md text-xs font-bold uppercase ${
                           m.tipe === "masuk"
                             ? "bg-blue-50 text-blue-700 border border-blue-200"
                             : "bg-rose-50 text-rose-800 border border-rose-200"
@@ -239,7 +244,7 @@ export default function RestockPage() {
                         {m.refRequest ? (
                           <span>Ref Pengajuan #{m.refRequest.id} ({m.refRequest.departemen?.kode})</span>
                         ) : (
-                          <span className="italic text-slate-400">Restock Supplier</span>
+                          <span className="italic text-slate-500">Restock Supplier</span>
                         )}
                       </td>
                     </tr>

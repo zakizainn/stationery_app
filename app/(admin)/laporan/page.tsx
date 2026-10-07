@@ -13,6 +13,17 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import {
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+  CaretUp,
+  CaretUpDown,
+  DownloadSimple,
+  Printer,
+  Warning,
+} from "@phosphor-icons/react";
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { getKategoriLabel } from "@/lib/kategori";
 
 /* ------------------------------------------------------------------ */
@@ -166,35 +177,26 @@ function shiftMonth(value: string, delta: number) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Ikon kecil (gaya sama dengan ikon di sidebar)                       */
+/* Ikon kecil (Phosphor, satu keluarga dengan sidebar)                 */
 /* ------------------------------------------------------------------ */
 
-function Icon({ d, className = "h-4 w-4" }: { d: string; className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d={d} />
-    </svg>
-  );
+function Icon({ ikon: Ikon, className = "h-4 w-4" }: { ikon: PhosphorIcon; className?: string }) {
+  return <Ikon className={className} aria-hidden="true" />;
 }
 
-const ICON_PATH = {
-  left: "M15 19l-7-7 7-7",
-  right: "M9 5l7 7-7 7",
-  download: "M12 4v12m0 0l-4-4m4 4l4-4M4 20h16",
-  printer:
-    "M6.72 13.83a42 42 0 0110.56 0m-10.56 0c-1.13.17-1.97 1.15-1.97 2.3v1.62c0 1.1.9 2 2 2h.75m.22-5.92L6 8.25A2.25 2.25 0 018.25 6h7.5A2.25 2.25 0 0118 8.25l-.22 5.58m-10.56 0V18h10.56v-4.17M9 21h6",
-  up: "M5 15l7-7 7 7",
-  down: "M19 9l-7 7-7-7",
-  alert: "M12 9v3.75m0 3.75h.01M10.29 3.86l-8.4 14.55A1.5 1.5 0 003.19 20.7h17.62a1.5 1.5 0 001.3-2.29l-8.4-14.55a1.5 1.5 0 00-2.42 0z",
+const IKON = {
+  left: CaretLeft,
+  right: CaretRight,
+  download: DownloadSimple,
+  printer: Printer,
+  up: CaretUp,
+  down: CaretDown,
+  alert: Warning,
 };
 
 function SortIcon({ state }: { state: SortDir | null }) {
-  return (
-    <svg className={`h-3 w-3 ${state ? "text-slate-700" : "text-slate-300"}`} viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-      <path d="M6 1.5l3 4H3l3-4z" opacity={state === "desc" ? 0.25 : 1} />
-      <path d="M6 10.5l-3-4h6l-3 4z" opacity={state === "asc" ? 0.25 : 1} />
-    </svg>
-  );
+  const Ikon = state === "asc" ? CaretUp : state === "desc" ? CaretDown : CaretUpDown;
+  return <Ikon className={`h-3 w-3 ${state ? "text-slate-700" : "text-slate-300"}`} aria-hidden="true" />;
 }
 
 /* ------------------------------------------------------------------ */
@@ -267,13 +269,13 @@ function ShareBar({ value, total, color }: { value: number; total: number; color
       <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
         <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span className="w-8 text-right text-[11px] tabular-nums text-slate-500">{pct}%</span>
+      <span className="w-8 text-right text-xs tabular-nums text-slate-500">{pct}%</span>
     </div>
   );
 }
 
 function Dash() {
-  return <span className="text-slate-300">–</span>;
+  return <span className="text-slate-300">-</span>;
 }
 
 function SortTh({
@@ -303,7 +305,7 @@ function SortTh({
       <button
         type="button"
         onClick={() => onSort(k)}
-        className={`inline-flex cursor-pointer items-center gap-1.5 rounded font-semibold hover:text-slate-900 ${FOCUS} ${
+        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md font-semibold hover:text-slate-900 ${FOCUS} ${
           active ? "text-slate-900" : ""
         }`}
       >
@@ -342,7 +344,7 @@ function PeriodSwitcher({ month, onChange }: { month: string; onChange: (m: stri
   return (
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Pilih periode laporan">
       <button type="button" className={stepCls} onClick={() => onChange(shiftMonth(month, -1))} aria-label="Bulan sebelumnya">
-        <Icon d={ICON_PATH.left} />
+        <Icon ikon={IKON.left} />
       </button>
       <select aria-label="Bulan" value={mon} onChange={(e) => onChange(clamp(year, Number(e.target.value)))} className={selectCls}>
         {NAMA_BULAN.map((nama, i) => (
@@ -365,7 +367,7 @@ function PeriodSwitcher({ month, onChange }: { month: string; onChange: (m: stri
         disabled={month >= nowValue}
         aria-label="Bulan berikutnya"
       >
-        <Icon d={ICON_PATH.right} />
+        <Icon ikon={IKON.right} />
       </button>
       {month !== nowValue && (
         <button
@@ -389,7 +391,7 @@ function PeriodSwitcher({ month, onChange }: { month: string; onChange: (m: stri
 function Delta({ current, previous, prevLabel }: { current: number; previous: number; prevLabel: string }) {
   if (previous === 0) {
     return (
-      <p className="mt-2 text-xs text-slate-400">
+      <p className="mt-2 text-xs text-slate-500">
         {current === 0 ? `Tidak ada transaksi di ${prevLabel}` : `Belum ada pembanding di ${prevLabel}`}
       </p>
     );
@@ -400,7 +402,7 @@ function Delta({ current, previous, prevLabel }: { current: number; previous: nu
   }
   return (
     <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
-      <Icon d={pct > 0 ? ICON_PATH.up : ICON_PATH.down} className="h-3.5 w-3.5 text-slate-600" />
+      <Icon ikon={pct > 0 ? IKON.up : IKON.down} className="h-3.5 w-3.5 text-slate-600" />
       <span className="font-semibold tabular-nums text-slate-700">{Math.abs(Math.round(pct))}%</span>
       <span>dibanding {prevLabel}</span>
     </p>
@@ -443,7 +445,7 @@ function SplitBar({ masuk, keluar }: { masuk: number; keluar: number }) {
           </>
         )}
       </div>
-      <div className="mt-1.5 flex justify-between text-[11px] text-slate-500">
+      <div className="mt-1.5 flex justify-between text-xs text-slate-500">
         <span>Masuk {Math.round(pctMasuk)}%</span>
         <span>Keluar {total > 0 ? Math.round(100 - pctMasuk) : 0}%</span>
       </div>
@@ -745,16 +747,16 @@ function TabBarang({ data }: { data: LaporanData }) {
                           {berubah ? (
                             <div className="flex flex-col items-end gap-1">
                               <span>
-                                {rupiah(it.hargaMin)} – {rupiah(it.hargaMax)}
+                                {rupiah(it.hargaMin)} - {rupiah(it.hargaMax)}
                               </span>
                               <button
                                 type="button"
                                 aria-expanded={terbuka}
                                 onClick={() => setExpandedId(terbuka ? null : it.itemId)}
-                                className={`inline-flex cursor-pointer items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800 hover:bg-amber-100 print:hidden ${FOCUS}`}
+                                className={`inline-flex cursor-pointer items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 print:hidden ${FOCUS}`}
                               >
                                 Harga berubah
-                                <Icon d={terbuka ? ICON_PATH.up : ICON_PATH.down} className="h-3 w-3" />
+                                <Icon ikon={terbuka ? IKON.up : IKON.down} className="h-3 w-3" />
                               </button>
                             </div>
                           ) : (
@@ -946,7 +948,7 @@ function TabTransaksi({ data, showAll }: { data: LaporanData; showAll: boolean }
   const sumKeluar = filtered.filter((r) => r.tipe === "keluar").reduce((s, r) => s + r.nominal, 0);
 
   const segCls = (aktif: boolean) =>
-    `cursor-pointer rounded px-3 py-1.5 text-sm font-semibold transition-colors ${FOCUS} ${
+    `cursor-pointer rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${FOCUS} ${
       aktif ? "bg-white text-brand-700 shadow-xs" : "text-slate-500 hover:text-slate-800"
     }`;
 
@@ -1045,7 +1047,7 @@ function TabTransaksi({ data, showAll }: { data: LaporanData; showAll: boolean }
               <p>
                 {showAll
                   ? `${angka(filtered.length)} transaksi`
-                  : `Menampilkan ${angka(from + 1)}–${angka(Math.min(from + PAGE_SIZE, filtered.length))} dari ${angka(filtered.length)} transaksi`}
+                  : `Menampilkan ${angka(from + 1)}-${angka(Math.min(from + PAGE_SIZE, filtered.length))} dari ${angka(filtered.length)} transaksi`}
               </p>
               <p className="text-xs text-slate-500">
                 Total hasil ini:{" "}
@@ -1105,12 +1107,12 @@ function LaporanSkeleton() {
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="rounded-md border border-brand-200 bg-brand-50 px-6 py-10 text-center" role="alert">
-      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-brand-700 shadow-xs">
-        <Icon d={ICON_PATH.alert} className="h-5 w-5" />
+    <div className="rounded-md border border-rose-200 bg-rose-50 px-6 py-10 text-center" role="alert">
+      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-rose-700 shadow-xs">
+        <Icon ikon={IKON.alert} className="h-5 w-5" />
       </div>
-      <p className="text-sm font-bold text-brand-900">Laporan tidak bisa dimuat</p>
-      <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-brand-800">{message}</p>
+      <p className="text-sm font-bold text-rose-900">Laporan tidak bisa dimuat</p>
+      <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-rose-800">{message}</p>
       <button
         type="button"
         onClick={onRetry}
@@ -1242,7 +1244,7 @@ export default function LaporanPage() {
       </div>
 
       {/* Banner */}
-      <div className="flex flex-col gap-5 rounded-lg border-l-4 border-brand-600 bg-slate-900 p-6 text-white shadow-sm print:hidden lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-5 rounded-lg border-l-4 border-brand-600 bg-slate-900 p-6 text-white shadow-xs print:hidden lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Laporan Amount In / Out</h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-300">
@@ -1259,7 +1261,7 @@ export default function LaporanPage() {
               disabled={exporting}
               className={`${aksiCls} bg-white text-brand-900 hover:bg-brand-50`}
             >
-              <Icon d={ICON_PATH.download} />
+              <Icon ikon={IKON.download} />
               {exporting ? "Menyiapkan file..." : "Unduh Excel"}
             </button>
             <button
@@ -1268,7 +1270,7 @@ export default function LaporanPage() {
               disabled={!data || loading}
               className={`${aksiCls} border border-white/20 bg-white/10 text-white hover:bg-white/20`}
             >
-              <Icon d={ICON_PATH.printer} />
+              <Icon ikon={IKON.printer} />
               Cetak
             </button>
           </div>
@@ -1278,7 +1280,7 @@ export default function LaporanPage() {
       {exportError && (
         <div
           role="alert"
-          className="flex items-start justify-between gap-3 rounded-md border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 print:hidden"
+          className="flex items-start justify-between gap-3 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 print:hidden"
         >
           <p>
             <span className="font-bold">File Excel gagal diunduh.</span> {exportError}
@@ -1286,7 +1288,7 @@ export default function LaporanPage() {
           <button
             type="button"
             onClick={() => setExportError(null)}
-            className={`shrink-0 cursor-pointer rounded text-xs font-semibold text-brand-800 underline underline-offset-2 ${FOCUS}`}
+            className={`shrink-0 cursor-pointer rounded-md text-xs font-semibold text-rose-800 underline underline-offset-2 ${FOCUS}`}
           >
             Tutup
           </button>

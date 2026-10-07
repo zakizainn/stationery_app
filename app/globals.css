@@ -15,11 +15,15 @@
   --color-brand-800: #7a0009;
   --color-brand-900: #530006;
   --color-brand-950: #300003;
+
+  /* Satu warna latar kanvas untuk seluruh aplikasi (sebelumnya body memakai
+     #f4f5f7 sedangkan AppShell memakai slate-100, jadi ada dua abu-abu). */
+  --color-canvas: #f4f5f7;
 }
 
 :root {
   --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  --background: #f4f5f7;
+  --background: var(--color-canvas);
   --foreground: #171717;
 }
 
@@ -62,5 +66,20 @@ body {
 
 .animate-fade-in {
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Hormati preferensi "kurangi gerakan" dari sistem operasi: fade-in dimatikan
+   dan transisi dibuat instan. Spinner loading (animate-spin) sengaja tidak
+   disentuh karena itu umpan balik status, bukan dekorasi. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
 }
 

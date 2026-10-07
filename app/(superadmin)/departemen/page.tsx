@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 interface Departemen {
   id: number;
@@ -111,7 +112,7 @@ export default function DepartemenManagementPage() {
 
         <button
           onClick={openCreateModal}
-          className="bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-md shadow-sm transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+          className="bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-md shadow-xs transition-all text-xs shrink-0 self-start sm:self-auto cursor-pointer"
         >
           + Tambah Departemen Baru
         </button>
@@ -120,11 +121,11 @@ export default function DepartemenManagementPage() {
       {/* Table */}
       <div className="bg-white rounded-md border border-slate-200/80 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="py-12 text-center text-xs text-slate-400">Memuat data departemen...</div>
+          <TableSkeleton label="Memuat data departemen..." rows={6} cols={4} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
+              <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4">Kode</th>
                   <th className="py-3.5 px-4">Nama Departemen</th>
@@ -159,12 +160,12 @@ export default function DepartemenManagementPage() {
       {/* Modal Add/Edit */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <form onSubmit={handleSave} className="bg-white rounded-lg p-6 w-full max-w-md shadow-sm border border-slate-200 space-y-4">
+          <form onSubmit={handleSave} className="bg-white rounded-lg p-6 w-full max-w-md shadow-md border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="font-extrabold text-slate-900 text-base">
                 {editingDept ? "Edit Departemen" : "Tambah Departemen Baru"}
               </h2>
-              <button type="button" onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold">
+              <button type="button" onClick={() => setModalOpen(false)} className="text-slate-500 hover:text-slate-600 font-bold">
                 ✕
               </button>
             </div>
@@ -207,7 +208,7 @@ export default function DepartemenManagementPage() {
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2.5 rounded-md shadow-sm cursor-pointer"
+                className="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2.5 rounded-md shadow-xs cursor-pointer"
               >
                 Simpan Departemen
               </button>

@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { STATUS_TONE } from "@/lib/status";
+import { CheckCircle } from "@phosphor-icons/react";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingRegion, Skeleton } from "@/components/ui/Skeleton";
 
 export default function AdminDashboardPage() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -80,9 +84,9 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border-l-4 border-brand-600 p-6 sm:p-8 rounded-lg text-white shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border-l-4 border-brand-600 p-6 sm:p-8 rounded-lg text-white shadow-xs">
         <div>
-          <span className="inline-block px-3 py-1 bg-white/10 rounded text-xs font-semibold text-brand-200 mb-3 border border-white/10">
+          <span className="inline-block px-3 py-1 bg-white/10 rounded-md text-xs font-semibold text-brand-200 mb-3 border border-white/10">
             Admin Stationery
           </span>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard Stationery</h1>
@@ -94,7 +98,7 @@ export default function AdminDashboardPage() {
         <div className="flex gap-2 shrink-0">
           <Link
             href="/items"
-            className="bg-white text-brand-900 font-bold px-4 py-2.5 rounded-md text-xs hover:bg-brand-50 transition-all shadow-sm"
+            className="bg-white text-brand-900 font-bold px-4 py-2.5 rounded-md text-xs hover:bg-brand-50 transition-all shadow-xs"
           >
             Kelola Barang
           </Link>
@@ -112,18 +116,26 @@ export default function AdminDashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-bold text-slate-900">Antrean Pesanan Disetujui</h2>
-            <span className="px-2.5 py-1 rounded-full bg-brand-50 text-brand-800 font-bold text-xs border border-brand-200">
+            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200">
               {requests.length} Pesanan
             </span>
           </div>
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-xs text-slate-400">Memuat antrean pesanan...</div>
+          <LoadingRegion label="Memuat antrean pesanan..." className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="p-5 rounded-md border border-slate-200 bg-white flex items-center justify-between gap-4">
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-72 max-w-full" />
+                </div>
+                <Skeleton className="h-9 w-32" />
+              </div>
+            ))}
+          </LoadingRegion>
         ) : requests.length === 0 ? (
-          <div className="py-12 text-center bg-slate-50 rounded-md border border-dashed border-slate-200">
-            <p className="text-xs text-slate-500 font-medium">Tidak ada pengajuan yang membutuhkan pemrosesan saat ini.</p>
-          </div>
+          <EmptyState icon={CheckCircle} judul="Tidak ada pengajuan yang membutuhkan pemrosesan saat ini." />
         ) : (
           <div className="space-y-3">
             {requests.map((req) => (
@@ -134,13 +146,13 @@ export default function AdminDashboardPage() {
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-bold text-slate-900 text-sm">Pesanan #{req.noPengajuan}</span>
-                    <span className="px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
+                    <span className="px-2 py-0.5 rounded-md text-xs font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
                       {req.tipe === "rutin" ? "Order Rutin" : "Order Baru"}
                     </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
                       req.status === "diproses"
-                        ? "bg-blue-50 text-blue-800 border-blue-200"
-                        : "bg-brand-50 text-brand-800 border-brand-200"
+                        ? STATUS_TONE.proses
+                        : STATUS_TONE.sukses
                     }`}>
                       {req.status === "diproses"
                         ? "Sedang Diproses"
@@ -156,7 +168,7 @@ export default function AdminDashboardPage() {
 
                   <div className="text-xs text-slate-500 flex flex-wrap gap-2 pt-1">
                     {req.items?.map((it: any) => (
-                      <span key={it.id} className="bg-slate-50 border border-slate-200 px-2 py-1 rounded text-xs font-medium">
+                      <span key={it.id} className="bg-slate-50 border border-slate-200 px-2 py-1 rounded-md text-xs font-medium">
                         {it.item?.nama} ({it.qtyDiajukan} {it.item?.satuan})
                       </span>
                     ))}
@@ -165,7 +177,7 @@ export default function AdminDashboardPage() {
 
                 <button
                   onClick={() => openProcessModal(req)}
-                  className="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-md shadow-sm transition-all cursor-pointer shrink-0"
+                  className="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-md shadow-xs transition-all cursor-pointer shrink-0"
                 >
                   Proses & Penyesuaian Qty →
                 </button>
@@ -188,7 +200,7 @@ export default function AdminDashboardPage() {
               </div>
               <button
                 onClick={() => setActiveReq(null)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                className="text-slate-500 hover:text-slate-600 text-sm font-bold"
               >
                 ✕
               </button>
@@ -219,7 +231,7 @@ export default function AdminDashboardPage() {
                         </div>
 
                         <div className="text-right text-xs">
-                          <span className="text-slate-400 font-medium">Diajukan:</span>
+                          <span className="text-slate-500 font-medium">Diajukan:</span>
                           <div className="font-bold text-slate-800">{it.qtyDiajukan} {it.item?.satuan}</div>
                         </div>
                       </div>
@@ -284,9 +296,9 @@ export default function AdminDashboardPage() {
                 </button>
                 <button
                   onClick={() => handleUpdateStatus("selesai")}
-                  className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md cursor-pointer shadow-sm transition-colors"
+                  className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md cursor-pointer shadow-xs transition-colors"
                 >
-                  Selesaikan & Kurangi Stok Gudang ✓
+                  Selesaikan & Kurangi Stok Gudang
                 </button>
               </div>
             </div>

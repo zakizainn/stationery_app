@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { getKategoriLabel } from "@/lib/kategori";
+import { CaretDown, CaretUp, MagnifyingGlass, Package } from "@phosphor-icons/react";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 interface Item {
   id: number;
@@ -275,7 +278,7 @@ export default function MasterItemsPage() {
     <div className="space-y-6">
       {/* Toast notifikasi hasil import (muncul setelah popup auto-tertutup) */}
       {toast && (
-        <div className="fixed top-4 right-4 z-[60] bg-brand-700 text-white text-xs font-semibold px-4 py-3 rounded-md shadow-sm max-w-xs animate-fade-in">
+        <div className="fixed top-4 right-4 z-[60] bg-brand-700 text-white text-xs font-semibold px-4 py-3 rounded-md shadow-md max-w-xs animate-fade-in">
           {toast}
         </div>
       )}
@@ -298,7 +301,7 @@ export default function MasterItemsPage() {
           </button>
           <button
             onClick={openCreateModal}
-            className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 rounded-md shadow-sm transition-all text-xs cursor-pointer"
+            className="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2.5 rounded-md shadow-xs transition-all text-xs cursor-pointer"
           >
             + Tambah Barang Baru
           </button>
@@ -330,15 +333,16 @@ export default function MasterItemsPage() {
       {/* Items Table */}
       <div className="bg-white rounded-md border border-slate-200/80 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="py-12 text-center text-xs text-slate-400">Memuat data barang...</div>
+          <TableSkeleton label="Memuat data barang..." rows={8} cols={6} />
         ) : filteredItems.length === 0 ? (
-          <div className="py-12 text-center text-xs text-slate-500">
-            {items.length === 0 ? "Belum ada barang di database." : "Tidak ada barang yang cocok dengan pencarian."}
-          </div>
+          <EmptyState
+            icon={items.length === 0 ? Package : MagnifyingGlass}
+            judul={items.length === 0 ? "Belum ada barang di database." : "Tidak ada barang yang cocok dengan pencarian."}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
+              <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4">Nama Barang</th>
                   <th className="py-3.5 px-4">Kategori</th>
@@ -354,12 +358,12 @@ export default function MasterItemsPage() {
                     <td className="py-3.5 px-4 font-bold text-slate-900">
                       {item.nama}
                       {!item.aktif && (
-                        <span className="ml-2 text-[10px] text-slate-600 bg-slate-200 px-1.5 py-0.5 rounded border border-slate-300">
+                        <span className="ml-2 text-xs text-slate-600 bg-slate-200 px-1.5 py-0.5 rounded-md border border-slate-300">
                           Nonaktif
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 uppercase text-[11px] font-bold text-slate-500">
+                    <td className="py-3.5 px-4 uppercase text-xs font-bold text-slate-500">
                       {getKategoriLabel(item.kategori)}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
@@ -368,38 +372,38 @@ export default function MasterItemsPage() {
                     <td className="py-3.5 px-4 text-slate-500">{item.stokMinimum} {item.satuan}</td>
                     <td className="py-3.5 px-4">
                       {item.bisaDitukar ? (
-                        <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                        <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                           Ya (Wajib Tukar)
                         </span>
                       ) : (
-                        <span className="text-slate-400">-</span>
+                        <span className="text-slate-500">-</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => openHargaHistory(item)}
-                          className="text-[11px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap"
+                          className="text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap"
                         >
                           Riwayat Harga
                         </button>
                         <button
                           onClick={() => openEditModal(item)}
-                          className="text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                          className="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
                         >
                           Edit
                         </button>
                         {item.aktif ? (
                           <button
                             onClick={() => handleDelete(item.id)}
-                            className="text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                            className="text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
                           >
                             Hapus
                           </button>
                         ) : (
                           <button
                             onClick={() => handleReaktifkan(item)}
-                            className="text-[11px] font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                            className="text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
                           >
                             Aktifkan
                           </button>
@@ -416,7 +420,7 @@ export default function MasterItemsPage() {
         {!loading && filteredItems.length > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-xs text-slate-500">
             <span>
-              Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredItems.length)} dari{" "}
+              Menampilkan {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filteredItems.length)} dari{" "}
               {filteredItems.length} barang
             </span>
             <div className="flex items-center gap-2">
@@ -447,7 +451,7 @@ export default function MasterItemsPage() {
       {/* Modal Add/Edit */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <form onSubmit={handleSave} className="bg-white rounded-lg p-6 w-full max-w-md shadow-sm border border-slate-200 space-y-4">
+          <form onSubmit={handleSave} className="bg-white rounded-lg p-6 w-full max-w-md shadow-md border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="font-extrabold text-slate-900 text-base">
                 {editingItem ? "Edit Barang Stationery" : "Tambah Barang Baru"}
@@ -455,7 +459,7 @@ export default function MasterItemsPage() {
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                className="text-slate-500 hover:text-slate-600 text-sm font-bold"
               >
                 ✕
               </button>
@@ -563,7 +567,7 @@ export default function MasterItemsPage() {
                   onChange={(e) => setHarga(parseInt(e.target.value) || 0)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">Dipakai untuk hitung nominal di halaman Laporan.</p>
+                <p className="text-xs text-slate-500 mt-1">Dipakai untuk hitung nominal di halaman Laporan.</p>
               </div>
 
               <div className="col-span-2">
@@ -577,8 +581,8 @@ export default function MasterItemsPage() {
                   onChange={(e) => setStokBuffer(parseInt(e.target.value) || 0)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Disembunyikan dari staf — mereka melihat stok gudang dikurangi angka ini. Admin tetap
+                <p className="text-xs text-slate-500 mt-1">
+                  Disembunyikan dari staf. Mereka melihat stok gudang dikurangi angka ini. Admin tetap
                   melihat stok gudang asli.
                 </p>
               </div>
@@ -590,7 +594,7 @@ export default function MasterItemsPage() {
                 id="bisaDitukar"
                 checked={bisaDitukar}
                 onChange={(e) => setBisaDitukar(e.target.checked)}
-                className="w-4 h-4 text-brand-600 rounded"
+                className="w-4 h-4 text-brand-600 rounded-md"
               />
               <label htmlFor="bisaDitukar" className="text-xs font-semibold text-slate-700">
                 Wajib Tukar Barang Lama Saat Pengajuan
@@ -607,7 +611,7 @@ export default function MasterItemsPage() {
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md shadow-sm cursor-pointer"
+                className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md shadow-xs cursor-pointer"
               >
                 Simpan Item
               </button>
@@ -619,10 +623,10 @@ export default function MasterItemsPage() {
       {/* Modal Import Excel */}
       {importModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-sm border border-slate-200 space-y-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-md border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="font-extrabold text-slate-900 text-base">Import dari Excel</h2>
-              <button onClick={closeImportModal} className="text-slate-400 hover:text-slate-600 text-sm font-bold">
+              <button onClick={closeImportModal} className="text-slate-500 hover:text-slate-600 text-sm font-bold">
                 ✕
               </button>
             </div>
@@ -655,7 +659,7 @@ export default function MasterItemsPage() {
             {importResult && (
               <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs space-y-1.5">
                 <p className="font-bold text-slate-800">
-                  {importResult.summary.totalRows} baris diproses — {importResult.summary.created} item baru
+                  {importResult.summary.totalRows} baris diproses, {importResult.summary.created} item baru
                   dibuat, {importResult.summary.restocked} item di-restock.
                 </p>
                 {importResult.errors.length > 0 && (
@@ -680,7 +684,7 @@ export default function MasterItemsPage() {
                 type="button"
                 disabled={!importFile || importing}
                 onClick={handleImport}
-                className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md shadow-sm transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {importing ? "Memproses..." : "Upload & Proses"}
               </button>
@@ -692,24 +696,24 @@ export default function MasterItemsPage() {
       {/* Modal Riwayat Harga */}
       {hargaHistoryItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-sm border border-slate-200 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-md border border-slate-200 space-y-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h2 className="font-extrabold text-slate-900 text-base">Riwayat Harga</h2>
                 <p className="text-xs text-slate-500 mt-0.5">{hargaHistoryItem.nama}</p>
               </div>
-              <button onClick={closeHargaHistory} className="text-slate-400 hover:text-slate-600 text-sm font-bold">
+              <button onClick={closeHargaHistory} className="text-slate-500 hover:text-slate-600 text-sm font-bold">
                 ✕
               </button>
             </div>
 
-            <p className="text-[11px] text-slate-400">
-              Mencatat setiap kali harga item ini diubah admin — terlepas apakah ada restock/order yang
+            <p className="text-xs text-slate-500">
+              Mencatat setiap kali harga item ini diubah admin, terlepas apakah ada restock/order yang
               menyertainya atau tidak.
             </p>
 
             {loadingHistory ? (
-              <div className="py-8 text-center text-xs text-slate-400">Memuat riwayat...</div>
+              <div className="py-8 text-center text-xs text-slate-500">Memuat riwayat...</div>
             ) : hargaHistory.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-500">
                 Belum ada perubahan harga tercatat untuk item ini.
@@ -721,10 +725,10 @@ export default function MasterItemsPage() {
                     <div>
                       <p className="text-sm font-bold text-slate-800">
                         Rp {h.hargaLama.toLocaleString("id-ID")}
-                        <span className="text-slate-400 mx-1.5">→</span>
+                        <span className="text-slate-500 mx-1.5">→</span>
                         Rp {h.hargaBaru.toLocaleString("id-ID")}
                       </p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-500 mt-0.5">
                         {new Date(h.tanggal).toLocaleString("id-ID", {
                           day: "numeric",
                           month: "short",
@@ -736,13 +740,21 @@ export default function MasterItemsPage() {
                       </p>
                     </div>
                     <span
-                      className={`text-xs font-bold px-2 py-1 rounded ${
+                      className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${
                         h.hargaBaru > h.hargaLama
-                          ? "bg-rose-50 text-rose-700"
-                          : "bg-brand-50 text-brand-700"
+                          ? "bg-rose-50 text-rose-800"
+                          : "bg-emerald-50 text-emerald-800"
                       }`}
                     >
-                      {h.hargaBaru > h.hargaLama ? "▲ Naik" : "▼ Turun"}
+                      {h.hargaBaru > h.hargaLama ? (
+                        <>
+                          <CaretUp size={12} aria-hidden="true" /> Naik
+                        </>
+                      ) : (
+                        <>
+                          <CaretDown size={12} aria-hidden="true" /> Turun
+                        </>
+                      )}
                     </span>
                   </div>
                 ))}

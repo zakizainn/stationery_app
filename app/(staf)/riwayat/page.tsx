@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { getStatusBadge } from "@/lib/status";
+import { ClockCounterClockwise } from "@phosphor-icons/react";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingRegion, Skeleton } from "@/components/ui/Skeleton";
 
 export default function RiwayatPage() {
   const { data: session } = useSession();
@@ -66,63 +69,65 @@ export default function RiwayatPage() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:items-end gap-2">
-          {/* Filter Bulan */}
-          <div className="flex items-center gap-2">
-            <input
-              type="month"
-              value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-xs font-semibold text-slate-700"
-            />
-            {filterMonth && (
-              <button
-                onClick={() => setFilterMonth("")}
-                className="text-xs text-slate-400 hover:text-slate-700 font-semibold cursor-pointer"
-              >
-                Reset bulan
-              </button>
-            )}
-          </div>
-
-          {/* Status Filter */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-            {[
-              { id: "semua", label: "Semua" },
-              { id: "pending", label: "Pending" },
-              { id: "approved", label: "Disetujui" },
-              { id: "diproses", label: "Diproses" },
-              { id: "selesai", label: "Selesai" },
-              { id: "rejected", label: "Ditolak" },
-            ].map((st) => (
-              <button
-                key={st.id}
-                onClick={() => setFilterStatus(st.id)}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  filterStatus === st.id
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60"
-                }`}
-              >
-                {st.label}
-              </button>
-            ))}
-          </div>
+        {/* Filter: bulan + status dalam satu baris */}
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <input
+            type="month"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            aria-label="Filter bulan"
+            className="bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-xs font-semibold text-slate-700"
+          />
+          {filterMonth && (
+            <button
+              onClick={() => setFilterMonth("")}
+              className="text-xs text-slate-500 hover:text-slate-700 font-semibold cursor-pointer"
+            >
+              Reset bulan
+            </button>
+          )}
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            aria-label="Filter status"
+            className="bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-600 cursor-pointer"
+          >
+            <option value="semua">Semua status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Disetujui</option>
+            <option value="diproses">Diproses</option>
+            <option value="selesai">Selesai</option>
+            <option value="rejected">Ditolak</option>
+          </select>
         </div>
       </div>
 
       {/* Request Table */}
       {loading ? (
-        <div className="py-16 text-center text-xs text-slate-400">Memuat riwayat pengajuan...</div>
+        <LoadingRegion
+          label="Memuat riwayat pengajuan..."
+          className="bg-white border border-slate-200 rounded-md divide-y divide-slate-100"
+        >
+          <div className="p-3 bg-slate-50">
+            <Skeleton className="h-4 w-full" />
+          </div>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-6 px-4 py-3.5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 flex-1" />
+              <Skeleton className="h-5 w-28 rounded-full" />
+            </div>
+          ))}
+        </LoadingRegion>
       ) : filteredRequests.length === 0 ? (
-        <div className="py-16 text-center bg-white rounded-md border border-dashed border-slate-200">
-          <p className="text-xs text-slate-500 font-medium">Tidak ada pengajuan dengan status ini.</p>
-        </div>
+        <EmptyState icon={ClockCounterClockwise} judul="Tidak ada pengajuan dengan status ini." />
       ) : (
         <div className="bg-white border border-slate-200 rounded-md overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-500">
+              <tr className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                 <th className="py-2.5 px-4 font-bold">No. Pengajuan</th>
                 <th className="py-2.5 px-4 font-bold">Tanggal</th>
                 <th className="py-2.5 px-4 font-bold">Tipe</th>
@@ -146,7 +151,7 @@ export default function RiwayatPage() {
                       })}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-600">
+                      <span className="px-2 py-0.5 rounded-md text-xs font-bold uppercase bg-slate-100 text-slate-600">
                         {req.tipe}
                       </span>
                     </td>
@@ -158,7 +163,7 @@ export default function RiwayatPage() {
                         : `${items[0].item?.nama} +${items.length - 1} lainnya`}
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`px-2.5 py-1 rounded text-[11px] font-bold border ${badge.style}`}>
+                      <span className={`px-2.5 py-1 rounded-md text-xs font-bold border ${badge.style}`}>
                         {badge.label}
                       </span>
                     </td>
@@ -181,15 +186,15 @@ export default function RiwayatPage() {
       {/* Modal Detail Request */}
       {selectedReq && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-lg p-6 w-full max-w-xl shadow-sm border border-slate-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-xl shadow-md border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
                 <h2 className="font-extrabold text-slate-900 text-base">Detail Pengajuan #{selectedReq.noPengajuan}</h2>
-                <span className="text-xs text-slate-400">Tipe: {selectedReq.tipe}</span>
+                <span className="text-xs text-slate-500">Tipe: {selectedReq.tipe}</span>
               </div>
               <button
                 onClick={() => setSelectedReq(null)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                className="text-slate-500 hover:text-slate-600 text-sm font-bold"
               >
                 ✕
               </button>
@@ -199,26 +204,26 @@ export default function RiwayatPage() {
               {/* Info summary */}
               <div className="bg-slate-50 p-4 rounded-md border border-slate-200/80 grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="text-slate-400 font-medium">Pemohon</span>
+                  <span className="text-slate-500 font-medium">Pemohon</span>
                   <p className="font-bold text-slate-800">{selectedReq.user?.nama}</p>
                 </div>
                 <div>
-                  <span className="text-slate-400 font-medium">Departemen</span>
+                  <span className="text-slate-500 font-medium">Departemen</span>
                   <p className="font-bold text-slate-800">{selectedReq.departemen?.nama}</p>
                 </div>
                 <div>
-                  <span className="text-slate-400 font-medium">Tanggal Pengajuan</span>
+                  <span className="text-slate-500 font-medium">Tanggal Pengajuan</span>
                   <p className="font-bold text-slate-800">
                     {new Date(selectedReq.tanggal).toLocaleString("id-ID")}
                   </p>
                 </div>
                 <div>
-                  <span className="text-slate-400 font-medium">Status</span>
+                  <span className="text-slate-500 font-medium">Status</span>
                   <p className="mt-0.5">
                     {(() => {
                       const badge = getStatusBadge(selectedReq);
                       return (
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${badge.style}`}>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${badge.style}`}>
                           {badge.label}
                         </span>
                       );
@@ -252,7 +257,7 @@ export default function RiwayatPage() {
                           <td className="p-2.5 font-medium">
                             {it.item?.nama}
                             {it.penggunaan && (
-                              <div className="text-[10px] text-slate-500 italic">&quot;{it.penggunaan}&quot;</div>
+                              <div className="text-xs text-slate-500 italic">&quot;{it.penggunaan}&quot;</div>
                             )}
                           </td>
                           <td className="p-2.5 font-bold">{it.qtyDiajukan} {it.item?.satuan}</td>

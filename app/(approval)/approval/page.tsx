@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { getKategoriLabel } from "@/lib/kategori";
+import { Check } from "@phosphor-icons/react";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingRegion, Skeleton } from "@/components/ui/Skeleton";
 
 export default function ApprovalPage() {
   const { data: session } = useSession();
@@ -88,19 +91,28 @@ export default function ApprovalPage() {
 
       {/* List Pending Requests */}
       {loading ? (
-        <div className="py-16 text-center text-xs text-slate-400">Memuat pengajuan pending...</div>
+        <LoadingRegion label="Memuat pengajuan pending..." className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-md border border-slate-200/80 p-5 space-y-4">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-5 w-24 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+              <div className="flex justify-end gap-2">
+                <Skeleton className="h-9 w-24" />
+                <Skeleton className="h-9 w-40" />
+              </div>
+            </div>
+          ))}
+        </LoadingRegion>
       ) : requests.length === 0 ? (
-        <div className="py-16 text-center bg-white rounded-md border border-dashed border-slate-200 p-8 shadow-xs">
-          <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mx-auto mb-3">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h3 className="font-bold text-slate-800 text-sm">Tidak Ada Antrean Approval</h3>
-          <p className="text-sm text-slate-500 mt-1 leading-relaxed max-w-sm mx-auto">
-            Semua pengajuan stationery dari staf departemen telah diproses.
-          </p>
-        </div>
+        <EmptyState
+          icon={Check}
+          judul="Tidak Ada Antrean Approval"
+          deskripsi="Semua pengajuan stationery dari staf departemen telah diproses."
+        />
       ) : (
         <div className="space-y-3">
           {requests.map((req) => (
@@ -117,7 +129,7 @@ export default function ApprovalPage() {
                   </div>
                   <div className="min-w-0">
                     <h3 className="font-bold text-slate-900 text-sm">
-                      {req.user?.nama} <span className="text-slate-400 font-normal">({req.user?.nik})</span>
+                      {req.user?.nama} <span className="text-slate-500 font-normal">({req.user?.nik})</span>
                     </h3>
                     <div className="text-xs text-slate-500">
                       Departemen {req.departemen?.nama} · {new Date(req.tanggal).toLocaleString("id-ID")}
@@ -150,7 +162,7 @@ export default function ApprovalPage() {
                       <div>
                         <span className="font-bold text-slate-800 text-sm">{it.item?.nama}</span>
                         {it.item?.kategori && (
-                          <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-500 align-middle">
+                          <span className="ml-2 rounded-md bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-500 align-middle">
                             {getKategoriLabel(it.item.kategori)}
                           </span>
                         )}
@@ -159,7 +171,7 @@ export default function ApprovalPage() {
                           <div className="text-slate-500 italic mt-0.5">Tujuan: "{it.penggunaan}"</div>
                         )}
                         {it.itemLama && (
-                          <div className="text-purple-700 font-semibold mt-0.5">
+                          <div className="text-slate-700 font-semibold mt-0.5">
                             Menukar dengan: {it.itemLama.nama}
                           </div>
                         )}
@@ -184,9 +196,9 @@ export default function ApprovalPage() {
 
                 <button
                   onClick={() => setApprovingReq(req)}
-                  className="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-5 py-2.5 rounded-md shadow-sm transition-all cursor-pointer"
+                  className="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-5 py-2.5 rounded-md shadow-xs transition-all cursor-pointer"
                 >
-                  Setujui Pengajuan ✓
+                  Setujui Pengajuan
                 </button>
               </div>
             </div>
@@ -225,7 +237,7 @@ export default function ApprovalPage() {
               </button>
               <button
                 onClick={() => handleAction(rejectingReq.id, "reject", catatanReject)}
-                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2.5 rounded-md cursor-pointer shadow-sm"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2.5 rounded-md cursor-pointer shadow-xs"
               >
                 Konfirmasi Penolakan
               </button>
@@ -241,7 +253,7 @@ export default function ApprovalPage() {
               Setujui Pengajuan #{approvingReq.noPengajuan}?
             </h2>
             <p className="text-xs text-slate-500 mb-4">
-              Anda akan menyetujui pengajuan dari {approvingReq.user?.nama} ({approvingReq.user?.nik}). Pastikan barang dan jumlahnya sudah sesuai — tindakan ini tidak bisa dibatalkan setelah disetujui.
+              Anda akan menyetujui pengajuan dari {approvingReq.user?.nama} ({approvingReq.user?.nik}). Pastikan barang dan jumlahnya sudah sesuai. Tindakan ini tidak bisa dibatalkan setelah disetujui.
             </p>
 
             <div className="divide-y divide-slate-100 border border-slate-200 rounded-md overflow-hidden text-xs mb-4">
@@ -269,7 +281,7 @@ export default function ApprovalPage() {
               <button
                 onClick={() => handleAction(approvingReq.id, "approve")}
                 disabled={submittingApprove}
-                className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md cursor-pointer shadow-sm disabled:opacity-60"
+                className="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-md cursor-pointer shadow-xs disabled:opacity-60"
               >
                 {submittingApprove ? "Memproses..." : "Ya, Setujui"}
               </button>
