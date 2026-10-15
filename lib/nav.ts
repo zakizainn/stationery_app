@@ -36,6 +36,7 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/dashboard", label: "Dashboard" },
     { href: "/items", label: "Master Item" },
     { href: "/restock", label: "Restock" },
+    { href: "/stok-awal", label: "Stok Awal" },
     { href: "/laporan", label: "Laporan" },
   ],
 };

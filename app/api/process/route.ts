@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { OPSI_TRANSAKSI_STOK, StokError, ubahStok } from "@/lib/stok";
 
 export async function POST(req: NextRequest) {
   try {
@@ -88,32 +89,26 @@ export async function POST(req: NextRequest) {
             const finalQty = qtyApproved;
 
             if (reqItem && finalQty > 0) {
-              // Baca stok terkini di dalam transaksi (bukan dari data yang
-              // sudah dibaca sebelum transaksi dimulai) dan tolak bila tidak
-              // cukup -- stok tidak boleh menjadi negatif.
-              const currentItem = await tx.item.findUnique({ where: { id: reqItem.itemId } });
-              if (!currentItem || currentItem.stok < finalQty) {
-                throw new Error(
-                  `Stok "${reqItem.item.nama}" tidak mencukupi (tersedia ${currentItem?.stok ?? 0}, diminta ${finalQty}). Kurangi jumlah disetujui terlebih dahulu.`
-                );
-              }
-
-              // Deduct stock
-              await tx.item.update({
-                where: { id: reqItem.itemId },
-                data: { stok: { decrement: finalQty } },
-              });
-
-              // Record outbound stock movement
-              await tx.stockMovement.create({
-                data: {
+              // Kurangi stok + catat movement lewat pintu tunggal (lib/stok.ts).
+              // Kecukupan stok diperiksa ATOMIK di database (UPDATE ... WHERE stok >= qty),
+              // bukan baca-lalu-tulis di aplikasi -- stok tidak bisa negatif walau dua
+              // pesanan diselesaikan bersamaan.
+              try {
+                await ubahStok(tx, {
                   itemId: reqItem.itemId,
                   tipe: "keluar",
                   qty: finalQty,
-                  hargaSaatTransaksi: reqItem.item.harga,
+                  sumber: "pengajuan",
+                  harga: reqItem.item.harga,
                   refRequestId: request.id,
-                },
-              });
+                  dibuatOlehId: Number(session.user.id),
+                });
+              } catch (e) {
+                if (e instanceof StokError && e.code === "STOK_TIDAK_CUKUP") {
+                  throw new Error(`${e.message} Kurangi jumlah disetujui terlebih dahulu.`);
+                }
+                throw e;
+              }
             }
           }
         }
@@ -132,7 +127,7 @@ export async function POST(req: NextRequest) {
           pesan: `Pengajuan stationery #${request.noPengajuan} ${statusMessage}`,
         },
       });
-    });
+    }, OPSI_TRANSAKSI_STOK);
 
     return NextResponse.json({ success: true, message: `Status pengajuan berhasil diubah menjadi ${status}.` });
   } catch (error: unknown) {

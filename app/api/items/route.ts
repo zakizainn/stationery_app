@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { KategoriItem, Prisma } from "@prisma/client";
+import { StokError, setStokKe, statusHttpStokError, transaksiStok } from "@/lib/stok";
 
 export async function GET(req: NextRequest) {
   try {
@@ -97,23 +98,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const newItem = await db.item.create({
-      data: {
-        nama,
-        kategori,
-        satuan,
-        stok: Number(stok) || 0,
-        stokMinimum: Number(stokMinimum) || 0,
-        stokBuffer: Number(stokBuffer) || 0,
-        harga: Number(harga) || 0,
-        bisaDitukar: Boolean(bisaDitukar),
-        jenisKertas: kategori === "kertas" ? jenisKertas : null,
-        fotoUrl: fotoUrl || null,
-      },
+    // Barang + stok awal dibuat dalam SATU transaksi. Stok awal dicatat sebagai
+    // movement "penyesuaian" (bukan "masuk") supaya tidak dihitung sebagai
+    // pembelian di Laporan, tapi tetap meninggalkan jejak di kartu stok.
+    const newItem = await transaksiStok(async (tx) => {
+      const created = await tx.item.create({
+        data: {
+          nama,
+          kategori,
+          satuan,
+          stok: 0,
+          stokMinimum: Number(stokMinimum) || 0,
+          stokBuffer: Number(stokBuffer) || 0,
+          harga: Number(harga) || 0,
+          bisaDitukar: Boolean(bisaDitukar),
+          jenisKertas: kategori === "kertas" ? jenisKertas : null,
+          fotoUrl: fotoUrl || null,
+        },
+      });
+      const stokAwal = Number(stok) || 0;
+      if (stokAwal !== 0) {
+        await setStokKe(tx, {
+          itemId: created.id,
+          stokBaru: stokAwal,
+          alasan: "Stok awal barang baru",
+          sumber: "stok_awal",
+          dibuatOlehId: Number(session.user.id),
+        });
+      }
+      return tx.item.findUniqueOrThrow({ where: { id: created.id } });
     });
 
     return NextResponse.json({ success: true, data: newItem }, { status: 201 });
   } catch (error: unknown) {
+    if (error instanceof StokError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: statusHttpStokError(error) });
+    }
     const message = error instanceof Error ? error.message : "Failed to create item";
     return NextResponse.json(
       { success: false, error: message },

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { StokError, statusHttpStokError, transaksiStok, ubahStok } from "@/lib/stok";
+import { tanggalWIBKeDate } from "@/lib/waktu";
 
 export async function GET(_req: NextRequest) {
   try {
@@ -13,6 +15,7 @@ export async function GET(_req: NextRequest) {
     const movements = await db.stockMovement.findMany({
       include: {
         item: true,
+        dibuatOleh: { select: { nama: true } },
         refRequest: {
           include: {
             user: { select: { nama: true } },
@@ -21,7 +24,7 @@ export async function GET(_req: NextRequest) {
         },
       },
       orderBy: { tanggal: "desc" },
-      take: 50,
+      take: 100,
     });
 
     return NextResponse.json({ success: true, data: movements });
@@ -42,38 +45,43 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { itemId, qty } = body;
+    const { itemId, tanggal, catatan } = body;
+    const qty = Number(body.qty);
 
-    if (!itemId || !qty || Number(qty) <= 0) {
+    if (!itemId || !Number.isInteger(qty) || qty <= 0) {
       return NextResponse.json(
-        { success: false, error: "Pilih barang dan masukkan jumlah stok yang valid (>0)." },
+        { success: false, error: "Pilih barang dan masukkan jumlah stok yang valid (bilangan bulat > 0)." },
         { status: 400 }
       );
     }
 
-    const item = await db.item.findUnique({ where: { id: Number(itemId) } });
-    if (!item) {
-      return NextResponse.json({ success: false, error: "Barang tidak ditemukan." }, { status: 404 });
+    // Tanggal opsional (YYYY-MM-DD, WIB) -- untuk mencatat barang yang datang di hari sebelumnya.
+    let tanggalMasuk: Date | undefined;
+    if (tanggal) {
+      const d = tanggalWIBKeDate(String(tanggal));
+      if (!d) {
+        return NextResponse.json({ success: false, error: "Format tanggal tidak valid (gunakan YYYY-MM-DD)." }, { status: 400 });
+      }
+      tanggalMasuk = d;
     }
 
-    await db.$transaction(async (tx) => {
-      await tx.item.update({
-        where: { id: Number(itemId) },
-        data: { stok: { increment: Number(qty) } },
-      });
+    const item = await transaksiStok((tx) =>
+      ubahStok(tx, {
+        itemId: Number(itemId),
+        tipe: "masuk",
+        qty,
+        sumber: "restock",
+        tanggal: tanggalMasuk,
+        catatan: catatan ? String(catatan) : null,
+        dibuatOlehId: Number(session.user.id),
+      })
+    );
 
-      await tx.stockMovement.create({
-        data: {
-          itemId: Number(itemId),
-          tipe: "masuk",
-          qty: Number(qty),
-          hargaSaatTransaksi: item.harga,
-        },
-      });
-    });
-
-    return NextResponse.json({ success: true, message: `Stok ${item.nama} berhasil ditambah sebanyak ${qty} ${item.satuan}.` });
+    return NextResponse.json({ success: true, message: `Stok ${item.namaItem} berhasil ditambah sebanyak ${qty} ${item.satuan}.` });
   } catch (error: unknown) {
+    if (error instanceof StokError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: statusHttpStokError(error) });
+    }
     const message = error instanceof Error ? error.message : "Failed to restock item";
     return NextResponse.json(
       { success: false, error: message },

@@ -4,6 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getKategoriLabel } from "@/lib/kategori";
 
+// Laporan Amount In / Out hanya menghitung PEMBELIAN (masuk) dan PEMAKAIAN (keluar).
+// Movement "penyesuaian_*" (STO, edit manual, stok awal) adalah koreksi stok,
+// bukan transaksi, jadi sengaja tidak ikut dihitung.
+const TIPE_LAPORAN: ("masuk" | "keluar")[] = ["masuk", "keluar"];
+
 const ALLOWED_ROLES = ["admin_stationery", "superadmin"];
 
 export async function GET(req: NextRequest) {
@@ -25,7 +30,7 @@ export async function GET(req: NextRequest) {
     const end = new Date(year, month, 1); // awal bulan berikutnya (exclusive)
 
     const movements = await db.stockMovement.findMany({
-      where: { tanggal: { gte: start, lt: end } },
+      where: { tanggal: { gte: start, lt: end }, tipe: { in: TIPE_LAPORAN } },
       include: {
         item: true,
         refRequest: {
@@ -185,7 +190,7 @@ export async function GET(req: NextRequest) {
     const TREND_MONTHS = 6;
     const trendStart = new Date(year, month - 1 - (TREND_MONTHS - 1), 1);
     const trendMovements = await db.stockMovement.findMany({
-      where: { tanggal: { gte: trendStart, lt: end } },
+      where: { tanggal: { gte: trendStart, lt: end }, tipe: { in: TIPE_LAPORAN } },
       select: { tanggal: true, tipe: true, qty: true, hargaSaatTransaksi: true, item: { select: { harga: true } } },
     });
 

@@ -5,6 +5,11 @@ import { db } from "@/lib/db";
 import { getKategoriLabel } from "@/lib/kategori";
 import * as XLSX from "xlsx";
 
+// Laporan Amount In / Out hanya menghitung PEMBELIAN (masuk) dan PEMAKAIAN (keluar).
+// Movement "penyesuaian_*" (STO, edit manual, stok awal) adalah koreksi stok,
+// bukan transaksi, jadi sengaja tidak ikut dihitung.
+const TIPE_LAPORAN: ("masuk" | "keluar")[] = ["masuk", "keluar"];
+
 const ALLOWED_ROLES = ["admin_stationery", "superadmin"];
 
 export async function GET(req: NextRequest) {
@@ -27,7 +32,7 @@ export async function GET(req: NextRequest) {
 
     // Rekap sama persis dengan /api/laporan -- lihat file itu untuk detail logika.
     const movements = await db.stockMovement.findMany({
-      where: { tanggal: { gte: start, lt: end } },
+      where: { tanggal: { gte: start, lt: end }, tipe: { in: TIPE_LAPORAN } },
       include: {
         item: true,
         refRequest: {

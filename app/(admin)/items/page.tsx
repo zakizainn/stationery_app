@@ -96,6 +96,8 @@ export default function MasterItemsPage() {
   const [harga, setHarga] = useState(0);
   const [bisaDitukar, setBisaDitukar] = useState(false);
   const [jenisKertas, setJenisKertas] = useState("A4");
+  // Alasan wajib kalau angka stok diubah manual (dicatat sebagai penyesuaian stok).
+  const [alasanStok, setAlasanStok] = useState("");
 
   useEffect(() => {
     fetchItems();
@@ -205,6 +207,7 @@ export default function MasterItemsPage() {
     setHarga(0);
     setBisaDitukar(false);
     setJenisKertas("A4");
+    setAlasanStok("");
     setModalOpen(true);
   };
 
@@ -238,6 +241,7 @@ export default function MasterItemsPage() {
     setHarga(item.harga ?? 0);
     setBisaDitukar(item.bisaDitukar);
     setJenisKertas(item.jenisKertas || "A4");
+    setAlasanStok("");
     setModalOpen(true);
   };
 
@@ -254,6 +258,7 @@ export default function MasterItemsPage() {
       harga: Number(harga),
       bisaDitukar,
       jenisKertas: kategori === "kertas" ? jenisKertas : null,
+      ...(editingItem && { alasanStok: alasanStok.trim() }),
     };
 
     try {
@@ -560,157 +565,186 @@ export default function MasterItemsPage() {
       {/* Modal Add/Edit */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <form onSubmit={handleSave} className="bg-white rounded-lg p-6 w-full max-w-md shadow-md border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <form
+            onSubmit={handleSave}
+            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-md"
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 pb-3 pt-5">
               <h2 className="font-extrabold text-slate-900 text-base">
                 {editingItem ? "Edit Barang Stationery" : "Tambah Barang Baru"}
               </h2>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
+                aria-label="Tutup"
                 className="text-slate-500 hover:text-slate-600 text-sm font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Nama Barang
-              </label>
-              <input
-                type="text"
-                required
-                value={nama}
-                onChange={(e) => setNama(e.target.value)}
-                placeholder="Contoh: Pulpen Pilot Hitam 0.5"
-                className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            {/* Area scroll: kalau form lebih tinggi dari layar, hanya bagian ini yang bergulir */}
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Kategori
-                </label>
-                <select
-                  value={kategori}
-                  onChange={(e) => setKategori(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800"
-                >
-                  <option value="barang_umum">ATK</option>
-                  <option value="kertas">Kertas & Lainnya</option>
-                  <option value="checksheet">Checksheet</option>
-                  <option value="catridge_toner_tinta">Catridge/Toner/Tinta</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Satuan
+                  Nama Barang
                 </label>
                 <input
                   type="text"
                   required
-                  value={satuan}
-                  onChange={(e) => setSatuan(e.target.value)}
-                  placeholder="pcs, rim, pack, lembar"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800"
+                  value={nama}
+                  onChange={(e) => setNama(e.target.value)}
+                  placeholder="Contoh: Pulpen Pilot Hitam 0.5"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Kategori
+                  </label>
+                  <select
+                    value={kategori}
+                    onChange={(e) => setKategori(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800"
+                  >
+                    <option value="barang_umum">ATK</option>
+                    <option value="kertas">Kertas & Lainnya</option>
+                    <option value="checksheet">Checksheet</option>
+                    <option value="catridge_toner_tinta">Catridge/Toner/Tinta</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Satuan
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={satuan}
+                    onChange={(e) => setSatuan(e.target.value)}
+                    placeholder="pcs, rim, pack, lembar"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800"
+                  />
+                </div>
+              </div>
+
+              {kategori === "kertas" && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Jenis Kertas
+                  </label>
+                  <select
+                    value={jenisKertas}
+                    onChange={(e) => setJenisKertas(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800"
+                  >
+                    <option value="A4">A4</option>
+                    <option value="A3">A3</option>
+                    <option value="A5">A5</option>
+                    <option value="Others">Others</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Stok Awal / Saat Ini
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={stok}
+                    onChange={(e) => setStok(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Stok Minimum (Alert)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={stokMinimum}
+                    onChange={(e) => setStokMinimum(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
+                  />
+                </div>
+
+                {editingItem && Number(stok) !== editingItem.stok && (
+                  <div className="col-span-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+                    <label className="block text-xs font-bold text-amber-900 mb-1">
+                      Alasan perubahan stok (wajib)
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={200}
+                      value={alasanStok}
+                      onChange={(e) => setAlasanStok(e.target.value)}
+                      placeholder="Contoh: hasil hitung fisik, koreksi salah input"
+                      className="w-full bg-white border border-amber-200 rounded-md px-3 py-2 text-xs font-semibold text-slate-800"
+                    />
+                    <p className="text-xs text-amber-900 mt-1.5">
+                      Stok berubah dari {editingItem.stok} menjadi {Number(stok)}. Selisihnya dicatat sebagai penyesuaian
+                      stok (tidak dihitung sebagai pembelian/pemakaian di Laporan).
+                    </p>
+                  </div>
+                )}
+
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Harga Satuan (Rp)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={harga}
+                    onChange={(e) => setHarga(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Dipakai untuk hitung nominal di halaman Laporan.</p>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Stok Buffer (Bayangan)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={stokBuffer}
+                    onChange={(e) => setStokBuffer(parseInt(e.target.value) || 0)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Disembunyikan dari staf. Mereka melihat stok gudang dikurangi angka ini. Admin tetap
+                    melihat stok gudang asli.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="bisaDitukar"
+                  checked={bisaDitukar}
+                  onChange={(e) => setBisaDitukar(e.target.checked)}
+                  className="w-4 h-4 text-brand-600 rounded-md"
+                />
+                <label htmlFor="bisaDitukar" className="text-xs font-semibold text-slate-700">
+                  Wajib Tukar Barang Lama Saat Pengajuan
+                </label>
+              </div>
+
             </div>
 
-            {kategori === "kertas" && (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Jenis Kertas
-                </label>
-                <select
-                  value={jenisKertas}
-                  onChange={(e) => setJenisKertas(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800"
-                >
-                  <option value="A4">A4</option>
-                  <option value="A3">A3</option>
-                  <option value="A5">A5</option>
-                  <option value="Others">Others</option>
-                </select>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Stok Awal / Saat Ini
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={stok}
-                  onChange={(e) => setStok(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Stok Minimum (Alert)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={stokMinimum}
-                  onChange={(e) => setStokMinimum(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Harga Satuan (Rp)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={harga}
-                  onChange={(e) => setHarga(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
-                />
-                <p className="text-xs text-slate-500 mt-1">Dipakai untuk hitung nominal di halaman Laporan.</p>
-              </div>
-
-              <div className="col-span-2">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Stok Buffer (Bayangan)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={stokBuffer}
-                  onChange={(e) => setStokBuffer(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  Disembunyikan dari staf. Mereka melihat stok gudang dikurangi angka ini. Admin tetap
-                  melihat stok gudang asli.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 pt-2">
-              <input
-                type="checkbox"
-                id="bisaDitukar"
-                checked={bisaDitukar}
-                onChange={(e) => setBisaDitukar(e.target.checked)}
-                className="w-4 h-4 text-brand-600 rounded-md"
-              />
-              <label htmlFor="bisaDitukar" className="text-xs font-semibold text-slate-700">
-                Wajib Tukar Barang Lama Saat Pengajuan
-              </label>
-            </div>
-
-            <div className="pt-4 flex gap-2 border-t border-slate-100">
+            <div className="flex shrink-0 gap-2 border-t border-slate-100 px-6 py-4">
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
@@ -732,7 +766,7 @@ export default function MasterItemsPage() {
       {/* Modal Import Excel */}
       {importModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-md border border-slate-200 space-y-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-md border border-slate-200 space-y-4 max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h2 className="font-extrabold text-slate-900 text-base">Import dari Excel</h2>
               <button onClick={closeImportModal} className="text-slate-500 hover:text-slate-600 text-sm font-bold">

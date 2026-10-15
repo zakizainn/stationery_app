@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as XLSX from "xlsx";
+import { transaksiStok, ubahStok } from "@/lib/stok";
 
 const ALLOWED_ROLES = ["admin_stationery", "superadmin"];
 
@@ -127,71 +128,95 @@ export async function POST(req: NextRequest) {
       }
 
       const stokMasuk = Number(row["STOK_MASUK"]) || 0;
-      const existing = await db.item.findFirst({
-        where: { nama: { equals: nama, mode: "insensitive" } },
-      });
 
-      if (existing) {
-        const updateData: Record<string, unknown> = {};
-        const kategori = normalizeKategori(row["KATEGORI"]);
-        if (kategori) updateData.kategori = kategori;
-        if (String(row["SATUAN"] ?? "").trim()) updateData.satuan = String(row["SATUAN"]).trim();
-        if (row["STOK_MINIMUM"] !== "" && row["STOK_MINIMUM"] != null) {
-          updateData.stokMinimum = Number(row["STOK_MINIMUM"]) || 0;
-        }
-        if (String(row["JENIS_KERTAS"] ?? "").trim()) updateData.jenisKertas = String(row["JENIS_KERTAS"]).trim();
-        if (String(row["BISA_DITUKAR"] ?? "").trim()) updateData.bisaDitukar = normalizeBoolean(row["BISA_DITUKAR"]);
-        if (row["HARGA"] !== "" && row["HARGA"] != null) updateData.harga = Number(row["HARGA"]) || 0;
-        if (stokMasuk > 0) updateData.stok = { increment: stokMasuk };
+      // Tiap baris dikerjakan dalam transaksinya sendiri: perubahan item, audit harga,
+      // dan stok+movement (lewat lib/stok.ts) berhasil atau batal bersama. Kesalahan
+      // satu baris dicatat dan tidak menggagalkan baris lain.
+      try {
+        const existing = await db.item.findFirst({
+          where: { nama: { equals: nama, mode: "insensitive" } },
+        });
 
-        await db.item.update({ where: { id: existing.id }, data: updateData });
+        if (existing) {
+          const updateData: Record<string, unknown> = {};
+          const kategori = normalizeKategori(row["KATEGORI"]);
+          if (kategori) updateData.kategori = kategori;
+          if (String(row["SATUAN"] ?? "").trim()) updateData.satuan = String(row["SATUAN"]).trim();
+          if (row["STOK_MINIMUM"] !== "" && row["STOK_MINIMUM"] != null) {
+            updateData.stokMinimum = Number(row["STOK_MINIMUM"]) || 0;
+          }
+          if (String(row["JENIS_KERTAS"] ?? "").trim()) updateData.jenisKertas = String(row["JENIS_KERTAS"]).trim();
+          if (String(row["BISA_DITUKAR"] ?? "").trim()) updateData.bisaDitukar = normalizeBoolean(row["BISA_DITUKAR"]);
+          if (row["HARGA"] !== "" && row["HARGA"] != null) updateData.harga = Number(row["HARGA"]) || 0;
 
-        // Catat ke audit log kalau baris ini benar-benar mengubah harga item.
-        if (updateData.harga !== undefined && updateData.harga !== existing.harga) {
-          await db.hargaHistory.create({
-            data: {
-              itemId: existing.id,
-              hargaLama: existing.harga,
-              hargaBaru: updateData.harga as number,
-              diubahOlehId: parseInt(session.user.id),
-            },
-          });
-        }
-
-        if (stokMasuk > 0) {
           const hargaSnapshot =
             row["HARGA"] !== "" && row["HARGA"] != null ? Number(row["HARGA"]) || 0 : existing.harga;
-          await db.stockMovement.create({
-            data: { itemId: existing.id, tipe: "masuk", qty: stokMasuk, hargaSaatTransaksi: hargaSnapshot },
+
+          await transaksiStok(async (tx) => {
+            if (Object.keys(updateData).length > 0) {
+              await tx.item.update({ where: { id: existing.id }, data: updateData });
+            }
+
+            // Catat ke audit log kalau baris ini benar-benar mengubah harga item.
+            if (updateData.harga !== undefined && updateData.harga !== existing.harga) {
+              await tx.hargaHistory.create({
+                data: {
+                  itemId: existing.id,
+                  hargaLama: existing.harga,
+                  hargaBaru: updateData.harga as number,
+                  diubahOlehId: parseInt(session.user.id),
+                },
+              });
+            }
+
+            if (stokMasuk > 0) {
+              await ubahStok(tx, {
+                itemId: existing.id,
+                tipe: "masuk",
+                qty: stokMasuk,
+                sumber: "impor",
+                harga: hargaSnapshot,
+                dibuatOlehId: parseInt(session.user.id),
+              });
+            }
           });
-          restocked++;
-        }
-      } else {
-        const kategori = normalizeKategori(row["KATEGORI"]);
-        const satuan = String(row["SATUAN"] ?? "").trim();
-        if (!kategori || !satuan) {
-          errors.push(`Baris ${rowNum} ("${nama}"): item baru wajib isi KATEGORI dan SATUAN yang valid.`);
-          continue;
-        }
-        const hargaBaru = Number(row["HARGA"]) || 0;
-        const newItem = await db.item.create({
-          data: {
-            nama,
-            kategori,
-            satuan,
-            stok: stokMasuk,
-            stokMinimum: Number(row["STOK_MINIMUM"]) || 0,
-            harga: hargaBaru,
-            jenisKertas: kategori === "kertas" ? String(row["JENIS_KERTAS"] ?? "").trim() || null : null,
-            bisaDitukar: normalizeBoolean(row["BISA_DITUKAR"]),
-          },
-        });
-        if (stokMasuk > 0) {
-          await db.stockMovement.create({
-            data: { itemId: newItem.id, tipe: "masuk", qty: stokMasuk, hargaSaatTransaksi: hargaBaru },
+          if (stokMasuk > 0) restocked++;
+        } else {
+          const kategori = normalizeKategori(row["KATEGORI"]);
+          const satuan = String(row["SATUAN"] ?? "").trim();
+          if (!kategori || !satuan) {
+            errors.push(`Baris ${rowNum} ("${nama}"): item baru wajib isi KATEGORI dan SATUAN yang valid.`);
+            continue;
+          }
+          const hargaBaru = Number(row["HARGA"]) || 0;
+          await transaksiStok(async (tx) => {
+            const newItem = await tx.item.create({
+              data: {
+                nama,
+                kategori,
+                satuan,
+                stok: 0,
+                stokMinimum: Number(row["STOK_MINIMUM"]) || 0,
+                harga: hargaBaru,
+                jenisKertas: kategori === "kertas" ? String(row["JENIS_KERTAS"] ?? "").trim() || null : null,
+                bisaDitukar: normalizeBoolean(row["BISA_DITUKAR"]),
+              },
+            });
+            if (stokMasuk > 0) {
+              await ubahStok(tx, {
+                itemId: newItem.id,
+                tipe: "masuk",
+                qty: stokMasuk,
+                sumber: "impor",
+                harga: hargaBaru,
+                dibuatOlehId: parseInt(session.user.id),
+              });
+            }
           });
+          created++;
         }
-        created++;
+      } catch (e) {
+        errors.push(`Baris ${rowNum} ("${nama}"): ${e instanceof Error ? e.message : "gagal diproses"}`);
       }
     }
 

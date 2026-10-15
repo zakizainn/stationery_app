@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { StokError, setStokKe, statusHttpStokError, transaksiStok } from "@/lib/stok";
 
 export async function PATCH(
   req: NextRequest,
@@ -20,46 +21,64 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { nama, kategori, satuan, stok, stokMinimum, stokBuffer, harga, bisaDitukar, jenisKertas, fotoUrl, aktif } = body;
+    const { nama, kategori, satuan, stok, stokMinimum, stokBuffer, harga, bisaDitukar, jenisKertas, fotoUrl, aktif, alasanStok } = body;
 
-    // Ambil harga lama dulu sebelum diupdate -- perlu buat catat audit log kalau berubah.
-    const existingItem = await db.item.findUnique({ where: { id: itemId }, select: { harga: true } });
-    if (!existingItem) {
-      return NextResponse.json({ success: false, error: "Item tidak ditemukan" }, { status: 404 });
-    }
+    // Semua perubahan di bawah dikerjakan dalam SATU transaksi: field biasa,
+    // audit harga, dan perubahan stok (lewat pintu tunggal lib/stok.ts).
+    const updatedItem = await transaksiStok(async (tx) => {
+      // Ambil harga lama dulu sebelum diupdate -- perlu buat catat audit log kalau berubah.
+      const existingItem = await tx.item.findUnique({ where: { id: itemId }, select: { harga: true } });
+      if (!existingItem) throw new StokError("ITEM_TIDAK_ADA", "Item tidak ditemukan");
 
-    const updatedItem = await db.item.update({
-      where: { id: itemId },
-      data: {
-        ...(nama && { nama }),
-        ...(kategori && { kategori }),
-        ...(satuan && { satuan }),
-        ...(stok !== undefined && { stok: Number(stok) }),
-        ...(stokMinimum !== undefined && { stokMinimum: Number(stokMinimum) }),
-        ...(stokBuffer !== undefined && { stokBuffer: Number(stokBuffer) }),
-        ...(harga !== undefined && { harga: Number(harga) }),
-        ...(bisaDitukar !== undefined && { bisaDitukar: Boolean(bisaDitukar) }),
-        ...(aktif !== undefined && { aktif: Boolean(aktif) }),
-        jenisKertas: jenisKertas !== undefined ? jenisKertas : undefined,
-        fotoUrl: fotoUrl !== undefined ? fotoUrl : undefined,
-      },
-    });
-
-    // Catat ke audit log KALAU harga benar-benar berubah -- ini sumber kebenaran
-    // utama untuk "kapan persis harga berubah", terlepas ada transaksi atau tidak.
-    if (harga !== undefined && Number(harga) !== existingItem.harga) {
-      await db.hargaHistory.create({
+      await tx.item.update({
+        where: { id: itemId },
         data: {
-          itemId,
-          hargaLama: existingItem.harga,
-          hargaBaru: Number(harga),
-          diubahOlehId: parseInt(session.user.id),
+          ...(nama && { nama }),
+          ...(kategori && { kategori }),
+          ...(satuan && { satuan }),
+          ...(stokMinimum !== undefined && { stokMinimum: Number(stokMinimum) }),
+          ...(stokBuffer !== undefined && { stokBuffer: Number(stokBuffer) }),
+          ...(harga !== undefined && { harga: Number(harga) }),
+          ...(bisaDitukar !== undefined && { bisaDitukar: Boolean(bisaDitukar) }),
+          ...(aktif !== undefined && { aktif: Boolean(aktif) }),
+          jenisKertas: jenisKertas !== undefined ? jenisKertas : undefined,
+          fotoUrl: fotoUrl !== undefined ? fotoUrl : undefined,
         },
       });
-    }
+
+      // Catat ke audit log KALAU harga benar-benar berubah -- ini sumber kebenaran
+      // utama untuk "kapan persis harga berubah", terlepas ada transaksi atau tidak.
+      if (harga !== undefined && Number(harga) !== existingItem.harga) {
+        await tx.hargaHistory.create({
+          data: {
+            itemId,
+            hargaLama: existingItem.harga,
+            hargaBaru: Number(harga),
+            diubahOlehId: parseInt(session.user.id),
+          },
+        });
+      }
+
+      // Stok TIDAK lagi ditimpa langsung. Kalau angkanya berubah, selisihnya
+      // dicatat sebagai movement penyesuaian dan ALASAN WAJIB diisi.
+      if (stok !== undefined) {
+        await setStokKe(tx, {
+          itemId,
+          stokBaru: Number(stok),
+          alasan: alasanStok,
+          sumber: "edit_manual",
+          dibuatOlehId: parseInt(session.user.id),
+        });
+      }
+
+      return tx.item.findUniqueOrThrow({ where: { id: itemId } });
+    });
 
     return NextResponse.json({ success: true, data: updatedItem });
   } catch (error: unknown) {
+    if (error instanceof StokError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: statusHttpStokError(error) });
+    }
     const message = error instanceof Error ? error.message : "Failed to update item";
     return NextResponse.json(
       { success: false, error: message },

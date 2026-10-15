@@ -5,6 +5,26 @@ import { ArrowsClockwise, Check } from "@phosphor-icons/react";
 import { STATUS_TONE } from "@/lib/status";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import RestockMassal from "@/components/admin/RestockMassal";
+import { hariIniWIB } from "@/lib/waktu";
+
+// Cara membaca satu baris log movement: label, warna badge, tanda (+/-), dan asal.
+const TIPE_TAMPIL: Record<string, { label: string; kelas: string; tanda: "+" | "-" }> = {
+  masuk: { label: "masuk", kelas: "bg-blue-50 text-blue-700 border border-blue-200", tanda: "+" },
+  keluar: { label: "keluar", kelas: "bg-rose-50 text-rose-800 border border-rose-200", tanda: "-" },
+  penyesuaian_plus: { label: "penyesuaian", kelas: "bg-amber-50 text-amber-800 border border-amber-200", tanda: "+" },
+  penyesuaian_minus: { label: "penyesuaian", kelas: "bg-amber-50 text-amber-800 border border-amber-200", tanda: "-" },
+};
+
+const SUMBER_LABEL: Record<string, string> = {
+  restock: "Restock supplier",
+  restock_massal: "Restock massal",
+  impor: "Impor Excel Master Item",
+  edit_manual: "Edit stok di Master Item",
+  stok_awal: "Stok awal barang baru",
+  baseline: "Stok awal periode",
+  sto: "Stock opname",
+};
 
 export default function RestockPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -14,6 +34,9 @@ export default function RestockPage() {
   // Form State
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [qty, setQty] = useState<number>(10);
+  const [tanggal, setTanggal] = useState<string>("");
+  const [catatan, setCatatan] = useState<string>("");
+  const [mode, setMode] = useState<"satu" | "massal">("satu");
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -77,6 +100,8 @@ export default function RestockPage() {
         body: JSON.stringify({
           itemId: Number(selectedItemId),
           qty: Number(qty),
+          tanggal: tanggal || undefined,
+          catatan: catatan.trim() || undefined,
         }),
       });
 
@@ -88,6 +113,8 @@ export default function RestockPage() {
         setSelectedItemId("");
         setItemSearch("");
         setQty(10);
+        setTanggal("");
+        setCatatan("");
         fetchData();
       } else {
         alert(data.error || "Gagal melakukan restock.");
@@ -108,8 +135,31 @@ export default function RestockPage() {
         </p>
       </div>
 
+      <div role="tablist" aria-label="Cara mencatat restock" className="inline-flex rounded-md border border-slate-200 bg-white p-1 shadow-xs">
+        {([
+          ["satu", "Satu barang"],
+          ["massal", "Banyak barang (massal)"],
+        ] as const).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={mode === id}
+            onClick={() => setMode(id)}
+            className={`cursor-pointer rounded px-4 py-2 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+              mode === id ? "bg-brand-700 text-white" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "massal" && <RestockMassal items={items} onSelesai={fetchData} />}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Restock Form */}
+        {/* Restock Form (satu barang) */}
+        {mode === "satu" && (
         <div className="space-y-4">
           <form onSubmit={handleRestockSubmit} className="bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
             <h3 className="font-extrabold text-slate-900 text-sm pb-3 border-b border-slate-100">
@@ -184,6 +234,33 @@ export default function RestockPage() {
               />
             </div>
 
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Tanggal Barang Datang <span className="font-normal normal-case text-slate-500">(kosong = sekarang)</span>
+              </label>
+              <input
+                type="date"
+                value={tanggal}
+                max={hariIniWIB()}
+                onChange={(e) => setTanggal(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-md p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Catatan <span className="font-normal normal-case text-slate-500">(opsional)</span>
+              </label>
+              <input
+                type="text"
+                maxLength={200}
+                value={catatan}
+                onChange={(e) => setCatatan(e.target.value)}
+                placeholder="Pemasok / no. PO"
+                className="w-full bg-slate-50 border border-slate-200 rounded-md p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+
             <button
               type="submit"
               disabled={submitting}
@@ -193,9 +270,10 @@ export default function RestockPage() {
             </button>
           </form>
         </div>
+        )}
 
         {/* Movements History */}
-        <div className="lg:col-span-2 bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4">
+        <div className={`${mode === "satu" ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-md border border-slate-200/80 p-6 shadow-xs space-y-4`}>
           <h3 className="font-extrabold text-slate-900 text-sm pb-3 border-b border-slate-100">
             Riwayat Transaksi Stok (Log Movement)
           </h3>
@@ -228,24 +306,22 @@ export default function RestockPage() {
                         })}
                       </td>
                       <td className="py-3 px-3">
-                        <span className={`px-2 py-0.5 rounded-md text-xs font-bold uppercase ${
-                          m.tipe === "masuk"
-                            ? "bg-blue-50 text-blue-700 border border-blue-200"
-                            : "bg-rose-50 text-rose-800 border border-rose-200"
-                        }`}>
-                          {m.tipe}
+                        <span className={`px-2 py-0.5 rounded-md text-xs font-bold uppercase ${(TIPE_TAMPIL[m.tipe] ?? TIPE_TAMPIL.keluar).kelas}`}>
+                          {(TIPE_TAMPIL[m.tipe] ?? TIPE_TAMPIL.keluar).label}
                         </span>
                       </td>
                       <td className="py-3 px-3 font-bold text-slate-900">{m.item?.nama}</td>
                       <td className="py-3 px-3 font-extrabold">
-                        {m.tipe === "masuk" ? "+" : "-"}{m.qty} {m.item?.satuan}
+                        {(TIPE_TAMPIL[m.tipe] ?? TIPE_TAMPIL.keluar).tanda}{m.qty} {m.item?.satuan}
                       </td>
                       <td className="py-3 px-3 text-slate-500">
                         {m.refRequest ? (
                           <span>Ref Pengajuan #{m.refRequest.id} ({m.refRequest.departemen?.kode})</span>
                         ) : (
-                          <span className="italic text-slate-500">Restock Supplier</span>
+                          <span className="italic text-slate-500">{SUMBER_LABEL[m.sumber] ?? "Restock Supplier"}</span>
                         )}
+                        {m.catatan && <span className="block text-slate-600 not-italic">{m.catatan}</span>}
+                        {m.dibuatOleh?.nama && <span className="block text-slate-500">oleh {m.dibuatOleh.nama}</span>}
                       </td>
                     </tr>
                   ))}

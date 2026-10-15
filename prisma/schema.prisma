@@ -45,6 +45,11 @@ enum StatusApproval {
 enum TipeStockMovement {
   keluar
   masuk
+  // Koreksi stok (bukan pembelian/pemakaian): hasil STO, edit manual, stok awal.
+  // Sengaja dipisah dari masuk/keluar supaya TIDAK ikut dihitung sebagai
+  // Amount In / Amount Out di Laporan. qty selalu positif; arahnya dari tipe.
+  penyesuaian_plus
+  penyesuaian_minus
 }
 
 model Departemen {
@@ -72,6 +77,7 @@ model User {
   approvals       Approval[]     @relation("Approver")
   notifications   Notification[]
   hargaHistoryDiubah HargaHistory[]
+  stockMovementsDibuat StockMovement[] @relation("StockMovementDibuatOleh")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -96,6 +102,7 @@ model Item {
   requestItemsLama RequestItem[] @relation("ItemLama")
   stockMovements   StockMovement[]
   hargaHistory     HargaHistory[]
+  stokAwalBulan    StokAwalBulan[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -197,6 +204,12 @@ model StockMovement {
   refRequest    Request?          @relation(fields: [refRequestId], references: [id])
   tanggal       DateTime          @default(now())
 
+  catatan       String?                                  // alasan / keterangan (wajib utk penyesuaian manual)
+  sumber        String            @default("sistem")     // pengajuan | restock | restock_massal | impor | edit_manual | stok_awal | baseline | sto
+  dibuatOlehId  Int?              @map("dibuat_oleh_id")
+  dibuatOleh    User?             @relation("StockMovementDibuatOleh", fields: [dibuatOlehId], references: [id])
+
+  @@index([itemId, tanggal])
   @@map("stock_movement")
 }
 
@@ -211,4 +224,21 @@ model Notification {
   tanggal   DateTime @default(now())
 
   @@map("notification")
+}
+
+// Snapshot "stok awal" tiap barang tiap bulan. Aturan tetapnya:
+//   Item.stok = stok awal bulan ini + masuk - keluar +/- penyesuaian bulan ini
+// Diisi oleh impor baseline (sekarang) dan oleh penutupan STO (fase berikutnya).
+model StokAwalBulan {
+  id        Int      @id @default(autoincrement())
+  periode   String                       // "2026-10" (zona waktu WIB)
+  itemId    Int      @map("item_id")
+  item      Item     @relation(fields: [itemId], references: [id])
+  qty       Int
+  sumber    String   @default("baseline") // baseline | sto
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([periode, itemId])
+  @@map("stok_awal_bulan")
 }
