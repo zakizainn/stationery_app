@@ -21,6 +21,34 @@ interface Item {
   fotoUrl?: string;
 }
 
+// Seberapa jauh di atas stok minimum sebuah barang dianggap overstock.
+// 3 = stok lebih dari 3x stok minimum. Ini keputusan bisnis (disepakati dengan
+// purchasing) -- cukup ubah angka ini kalau ambangnya berubah.
+const OVERSTOCK_FACTOR = 3;
+
+type StatusStok = "perlu_order" | "overstock" | "aman" | "minimum_kosong" | "nonaktif";
+
+// Balance = stok saat ini - stok minimum.
+//   <= 0                  -> perlu order (stok sudah mencapai/di bawah minimum)
+//   > 0 dan jauh di atas  -> overstock (direview: barangnya memang berlebih,
+//                            atau stok minimumnya yang kurang sesuai)
+function hitungBalance(item: Item): { balance: number; status: StatusStok } {
+  const balance = item.stok - item.stokMinimum;
+  let status: StatusStok;
+  if (!item.aktif) status = "nonaktif";
+  else if (balance <= 0) status = "perlu_order";
+  else if (item.stokMinimum <= 0) status = "minimum_kosong";
+  else if (item.stok > item.stokMinimum * OVERSTOCK_FACTOR) status = "overstock";
+  else status = "aman";
+  return { balance, status };
+}
+
+const STATUS_BADGE: Partial<Record<StatusStok, { label: string; cls: string }>> = {
+  perlu_order: { label: "Perlu order", cls: "text-brand-700 bg-brand-50 border-brand-200" },
+  overstock: { label: "Overstock", cls: "text-amber-800 bg-amber-50 border-amber-200" },
+  minimum_kosong: { label: "Minimum belum diatur", cls: "text-slate-700 bg-slate-100 border-slate-200" },
+};
+
 export default function MasterItemsPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +82,7 @@ export default function MasterItemsPage() {
   // perlu scroll panjang untuk cari & edit satu item.
   const [search, setSearch] = useState("");
   const [kategoriFilter, setKategoriFilter] = useState<string>("semua");
+  const [statusFilter, setStatusFilter] = useState<"semua" | StatusStok>("semua");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
 
@@ -74,13 +103,31 @@ export default function MasterItemsPage() {
 
   useEffect(() => {
     setPage(1); // reset ke halaman 1 setiap kali search/filter berubah
-  }, [search, kategoriFilter]);
+  }, [search, kategoriFilter, statusFilter]);
+
+  // Ringkasan status stok untuk kartu di atas tabel (tidak terpengaruh search/filter,
+  // supaya angkanya selalu menggambarkan seluruh barang aktif).
+  const ringkasan = items.reduce(
+    (acc, it) => {
+      acc[hitungBalance(it).status]++;
+      return acc;
+    },
+    { perlu_order: 0, overstock: 0, aman: 0, minimum_kosong: 0, nonaktif: 0 } as Record<StatusStok, number>
+  );
 
   const filteredItems = items.filter((it) => {
     const matchSearch = it.nama.toLowerCase().includes(search.toLowerCase());
     const matchKategori = kategoriFilter === "semua" || it.kategori === kategoriFilter;
-    return matchSearch && matchKategori;
+    const matchStatus = statusFilter === "semua" || hitungBalance(it).status === statusFilter;
+    return matchSearch && matchKategori && matchStatus;
   });
+  // Saat difilter per status, yang paling mendesak tampil paling atas:
+  // perlu order = balance paling kecil dulu, overstock = kelebihan terbesar dulu.
+  if (statusFilter === "perlu_order") {
+    filteredItems.sort((a, b) => hitungBalance(a).balance - hitungBalance(b).balance);
+  } else if (statusFilter === "overstock") {
+    filteredItems.sort((a, b) => hitungBalance(b).balance - hitungBalance(a).balance);
+  }
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
   const pagedItems = filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -308,6 +355,33 @@ export default function MasterItemsPage() {
         </div>
       </div>
 
+      {/* Pantau stok: klik kartu untuk memfilter tabel */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {(
+          [
+            { key: "perlu_order", label: "Perlu order", hint: "Stok sudah mencapai atau di bawah minimum", bar: "border-l-brand-600" },
+            { key: "overstock", label: "Overstock", hint: `Stok lebih dari ${OVERSTOCK_FACTOR}× stok minimum`, bar: "border-l-amber-400" },
+            { key: "minimum_kosong", label: "Minimum belum diatur", hint: "Stok minimum 0, belum bisa dipantau", bar: "border-l-slate-300" },
+          ] as const
+        ).map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            aria-pressed={statusFilter === c.key}
+            onClick={() => setStatusFilter(statusFilter === c.key ? "semua" : c.key)}
+            className={`text-left bg-white rounded-md border border-slate-200/80 border-l-[3px] ${c.bar} p-4 shadow-xs hover:bg-slate-50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+              statusFilter === c.key ? "ring-2 ring-brand-500" : ""
+            }`}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-bold text-slate-700">{c.label}</span>
+              <span className="text-2xl font-extrabold tabular-nums text-slate-900">{ringkasan[c.key]}</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-600">{c.hint}</p>
+          </button>
+        ))}
+      </div>
+
       {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <input
@@ -327,6 +401,17 @@ export default function MasterItemsPage() {
           <option value="kertas">Kertas & Lainnya</option>
           <option value="checksheet">Checksheet</option>
           <option value="catridge_toner_tinta">Catridge/Toner/Tinta</option>
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as "semua" | StatusStok)}
+          aria-label="Filter status stok"
+          className="bg-white border border-slate-200 rounded-md px-4 py-2.5 text-xs font-medium text-slate-800"
+        >
+          <option value="semua">Semua status stok</option>
+          <option value="perlu_order">Perlu order</option>
+          <option value="overstock">Overstock</option>
+          <option value="minimum_kosong">Minimum belum diatur</option>
         </select>
       </div>
 
@@ -348,13 +433,19 @@ export default function MasterItemsPage() {
                   <th className="py-3.5 px-4">Kategori</th>
                   <th className="py-3.5 px-4">Stok Saat Ini</th>
                   <th className="py-3.5 px-4">Stok Min</th>
+                  <th className="py-3.5 px-4" title="Stok saat ini dikurangi stok minimum. 0 atau negatif berarti perlu order.">
+                    Balance
+                  </th>
                   <th className="py-3.5 px-4">Fitur Tukar</th>
                   <th className="py-3.5 px-4 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {pagedItems.map((item) => (
-                  <tr key={item.id} className={`hover:bg-slate-50/80 transition-all ${!item.aktif ? "opacity-50 bg-slate-50/50" : ""}`}>
+                {pagedItems.map((item) => {
+                  const { balance, status } = hitungBalance(item);
+                  const badge = STATUS_BADGE[status];
+                  return (
+                  <tr key={item.id} className={`hover:bg-slate-50/80 transition-all ${!item.aktif ? "opacity-50 bg-slate-50/50" : status === "perlu_order" ? "bg-brand-50/30" : ""}`}>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
                       {item.nama}
                       {!item.aktif && (
@@ -370,6 +461,23 @@ export default function MasterItemsPage() {
                       {item.stok} {item.satuan}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">{item.stokMinimum} {item.satuan}</td>
+                    <td className="py-3.5 px-4">
+                      {status === "nonaktif" ? (
+                        <span className="text-slate-500">-</span>
+                      ) : (
+                        <div className="flex flex-col items-start gap-1">
+                          <span className={`font-bold tabular-nums ${balance <= 0 ? "text-brand-700" : "text-slate-700"}`}>
+                            {balance > 0 ? "+" : balance < 0 ? "−" : ""}
+                            {Math.abs(balance)} {item.satuan}
+                          </span>
+                          {badge && (
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-md border whitespace-nowrap ${badge.cls}`}>
+                              {badge.label}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-3.5 px-4">
                       {item.bisaDitukar ? (
                         <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
@@ -411,7 +519,8 @@ export default function MasterItemsPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
