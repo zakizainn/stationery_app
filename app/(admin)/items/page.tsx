@@ -78,6 +78,19 @@ export default function MasterItemsPage() {
   >([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // Lapisan FIFO
+  const [lapisanItem, setLapisanItem] = useState<Item | null>(null);
+  const [lapisanData, setLapisanData] = useState<{
+    item: { id: number; nama: string; stok: number; satuan: string; harga: number };
+    lapisan: { id: number; qtyAwal: number; sisaQty: number; harga: number; tanggal: string; sumber: string; nilai: number }[];
+    totalNilai: number;
+    totalQty: number;
+  } | null>(null);
+  const [loadingLapisan, setLoadingLapisan] = useState(false);
+
+  // Total nilai persediaan seluruh barang (FIFO)
+  const [totalNilaiPersediaan, setTotalNilaiPersediaan] = useState<number | null>(null);
+
   // Search & pagination — 240+ item hasil impor Excel butuh ini biar tidak
   // perlu scroll panjang untuk cari & edit satu item.
   const [search, setSearch] = useState("");
@@ -99,8 +112,20 @@ export default function MasterItemsPage() {
   // Alasan wajib kalau angka stok diubah manual (dicatat sebagai penyesuaian stok).
   const [alasanStok, setAlasanStok] = useState("");
 
+  const fetchPersediaan = () => {
+    fetch("/api/items/persediaan")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setTotalNilaiPersediaan(data.data.totalNilai);
+        }
+      })
+      .catch((err) => console.error(err));
+  };
+
   useEffect(() => {
     fetchItems();
+    fetchPersediaan();
   }, []);
 
   useEffect(() => {
@@ -230,6 +255,28 @@ export default function MasterItemsPage() {
     setHargaHistory([]);
   };
 
+  const openLapisanModal = async (item: Item) => {
+    setLapisanItem(item);
+    setLoadingLapisan(true);
+    setLapisanData(null);
+    try {
+      const res = await fetch(`/api/items/${item.id}/lapisan`);
+      const data = await res.json();
+      if (data.success) {
+        setLapisanData(data.data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingLapisan(false);
+    }
+  };
+
+  const closeLapisanModal = () => {
+    setLapisanItem(null);
+    setLapisanData(null);
+  };
+
   const openEditModal = (item: Item) => {
     setEditingItem(item);
     setNama(item.nama);
@@ -281,6 +328,7 @@ export default function MasterItemsPage() {
       if (data.success) {
         setModalOpen(false);
         fetchItems();
+        fetchPersediaan();
       } else {
         alert(data.error || "Gagal menyimpan item.");
       }
@@ -299,6 +347,7 @@ export default function MasterItemsPage() {
       if (data.success) {
         setToast(data.message);
         fetchItems();
+        fetchPersediaan();
       } else {
         alert(data.error || "Gagal menghapus item.");
       }
@@ -318,6 +367,7 @@ export default function MasterItemsPage() {
       if (data.success) {
         setToast(`"${item.nama}" diaktifkan kembali.`);
         fetchItems();
+        fetchPersediaan();
       } else {
         alert(data.error || "Gagal mengaktifkan item.");
       }
@@ -360,8 +410,18 @@ export default function MasterItemsPage() {
         </div>
       </div>
 
-      {/* Pantau stok: klik kartu untuk memfilter tabel */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Ringkasan & Pantau Stok */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="text-left bg-white rounded-md border border-slate-200/80 border-l-[3px] border-l-emerald-500 p-4 shadow-xs">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-xs font-bold text-slate-700">Total Nilai Persediaan</span>
+            <span className="text-lg font-extrabold tabular-nums text-emerald-700">
+              {totalNilaiPersediaan !== null ? `Rp ${totalNilaiPersediaan.toLocaleString("id-ID")}` : "..."}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">Nilai riil stok aktif berbasis lapisan FIFO</p>
+        </div>
+
         {(
           [
             { key: "perlu_order", label: "Perlu order", hint: "Stok sudah mencapai atau di bawah minimum", bar: "border-l-brand-600" },
@@ -499,6 +559,12 @@ export default function MasterItemsPage() {
                           className="text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap"
                         >
                           Riwayat Harga
+                        </button>
+                        <button
+                          onClick={() => openLapisanModal(item)}
+                          className="text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap"
+                        >
+                          Lapisan
                         </button>
                         <button
                           onClick={() => openEditModal(item)}
@@ -708,7 +774,9 @@ export default function MasterItemsPage() {
                     onChange={(e) => setHarga(parseInt(e.target.value) || 0)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-bold text-slate-800"
                   />
-                  <p className="text-xs text-slate-500 mt-1">Dipakai untuk hitung nominal di halaman Laporan.</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Harga acuan default untuk restock dan stok awal baru. Perubahan di sini tidak mengubah nilai transaksi yang sudah dibekukan.
+                  </p>
                 </div>
 
                 <div className="col-span-2">
@@ -910,6 +978,110 @@ export default function MasterItemsPage() {
             >
               Tutup
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Lapisan FIFO */}
+      {lapisanItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-md border border-slate-200 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-extrabold text-slate-900 text-base">Lapisan Stok FIFO</h2>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                    Aktif
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">{lapisanItem.nama}</p>
+              </div>
+              <button onClick={closeLapisanModal} className="text-slate-500 hover:text-slate-600 text-sm font-bold cursor-pointer">
+                ✕
+              </button>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200/80 rounded-md p-3 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+              <div>
+                <span className="text-slate-500">Stok Master: </span>
+                <span className="font-bold text-slate-800">{lapisanItem.stok} {lapisanItem.satuan}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Total Sisa di Lapisan: </span>
+                <span className="font-bold text-teal-700">{lapisanData?.totalQty ?? "..."} {lapisanItem.satuan}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Total Nilai Persediaan: </span>
+                <span className="font-bold text-emerald-700">
+                  {lapisanData?.totalNilai !== undefined ? `Rp ${lapisanData.totalNilai.toLocaleString("id-ID")}` : "..."}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500 shrink-0">
+              Daftar lapisan harga yang masih memiliki sisa stok. Pengambilan atau pemakaian berikutnya akan memotong dari lapisan paling atas (tanggal terlama).
+            </p>
+
+            <div className="flex-1 overflow-y-auto min-h-0 border border-slate-100 rounded-md">
+              {loadingLapisan ? (
+                <div className="py-12 text-center text-xs text-slate-500">Memuat data lapisan...</div>
+              ) : !lapisanData || lapisanData.lapisan.length === 0 ? (
+                <div className="py-12 text-center text-xs text-slate-500">
+                  Tidak ada lapisan stok aktif (stok 0 atau belum ada lapisan tercatat).
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                    <tr>
+                      <th className="py-2.5 px-3">No</th>
+                      <th className="py-2.5 px-3">Tanggal Masuk</th>
+                      <th className="py-2.5 px-3">Sumber</th>
+                      <th className="py-2.5 px-3 text-right">Harga Satuan</th>
+                      <th className="py-2.5 px-3 text-right">Qty Awal</th>
+                      <th className="py-2.5 px-3 text-right">Sisa Qty</th>
+                      <th className="py-2.5 px-3 text-right">Nilai (Rp)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {lapisanData.lapisan.map((l, idx) => (
+                      <tr key={l.id} className="hover:bg-slate-50/80">
+                        <td className="py-2 px-3 text-slate-500">{idx + 1}</td>
+                        <td className="py-2 px-3 text-slate-700">
+                          {new Date(l.tanggal).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="py-2 px-3">
+                          <span className="capitalize px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700">
+                            {l.sumber.replace(/_/g, " ")}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-right font-medium text-slate-800">
+                          Rp {l.harga.toLocaleString("id-ID")}
+                        </td>
+                        <td className="py-2 px-3 text-right text-slate-500">{l.qtyAwal}</td>
+                        <td className="py-2 px-3 text-right font-bold text-teal-800">{l.sisaQty}</td>
+                        <td className="py-2 px-3 text-right font-bold text-emerald-700">
+                          Rp {l.nilai.toLocaleString("id-ID")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="pt-2 shrink-0">
+              <button
+                type="button"
+                onClick={closeLapisanModal}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-md transition-all cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

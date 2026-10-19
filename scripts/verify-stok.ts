@@ -35,7 +35,10 @@ async function pastikanGagal(nama: string, kode: string, fn: () => Promise<unkno
 
 async function bersihkan() {
   const filter = { item: { nama: { startsWith: "ZZ_TEST_" } } };
+  // Urutan penting (kunci asing): pemakaian lapisan -> movement -> lapisan -> sisanya.
+  await db.lapisanPemakaian.deleteMany({ where: { movement: filter } });
   await db.stockMovement.deleteMany({ where: filter });
+  await db.stokLapisan.deleteMany({ where: filter });
   await db.stokAwalBulan.deleteMany({ where: filter });
   await db.item.deleteMany({ where: { nama: { startsWith: "ZZ_TEST_" } } });
 }
@@ -162,6 +165,7 @@ async function main() {
   const semua = await db.item.findMany({ where: { nama: { not: { startsWith: "ZZ_TEST_" } } }, select: { id: true, stok: true } });
   if (semua.length > 0) {
     const sebelum = new Map(semua.map((i) => [i.id, i.stok]));
+    const batasLapisan = (await db.stokLapisan.aggregate({ _max: { id: true } }))._max.id ?? 0;
     const t0 = Date.now();
     await transaksiStok((tx) => ubahStokMasukBanyak(tx, { baris: semua.map((i) => ({ itemId: i.id, qty: 3 })), sumber: "restock_massal", catatan: "ZZ_TEST skala" }));
     const ms = Date.now() - t0;
@@ -170,6 +174,7 @@ async function main() {
     cek(`${semua.length} barang selesai dalam ${ms} ms (< 5000 ms, batas transaksi default)`, ms < 5000, `${ms} ms`);
     // kembalikan data asli: hapus movement uji lalu kurangi lagi
     await db.stockMovement.deleteMany({ where: { catatan: "ZZ_TEST skala" } });
+    await db.stokLapisan.deleteMany({ where: { id: { gt: batasLapisan } } }); // lapisan yang dibentuk uji ini
     await db.$executeRaw`UPDATE item SET stok = stok - 3 WHERE id = ANY(${semua.map((i) => i.id)}::int[])`;
   }
 

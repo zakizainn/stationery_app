@@ -27,13 +27,15 @@ export async function GET(req: NextRequest) {
     const items = await db.item.findMany({
       where: { aktif: true },
       orderBy: [{ kategori: "asc" }, { nama: "asc" }],
-      select: { nama: true, kategori: true, satuan: true, stok: true },
+      select: { nama: true, kategori: true, satuan: true, stok: true, harga: true },
     });
+    // STOK_AWAL dan HARGA diisi admin. HARGA opsional: harga per satuan untuk stok yang
+    // BERTAMBAH akibat penyelarasan (FIFO); kosong = harga master (kolom HARGA_MASTER).
     const buffer = buatXlsx(
       `Stok Awal ${periode}`,
-      ["NAMA", "KATEGORI", "SATUAN", "STOK_SISTEM_SAAT_INI", "STOK_AWAL"],
-      items.map((it) => [it.nama, getKategoriLabel(it.kategori), it.satuan, it.stok, ""]),
-      [38, 20, 10, 22, 12]
+      ["NAMA", "KATEGORI", "SATUAN", "STOK_SISTEM_SAAT_INI", "HARGA_MASTER", "STOK_AWAL", "HARGA"],
+      items.map((it) => [it.nama, getKategoriLabel(it.kategori), it.satuan, it.stok, it.harga, "", ""]),
+      [38, 20, 10, 22, 14, 12, 12]
     );
     return new NextResponse(new Uint8Array(buffer), {
       headers: {
@@ -75,7 +77,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Tidak ada baris untuk disimpan." }, { status: 400 });
     }
 
-    const baris = body.baris.map((b: Record<string, unknown>) => ({ itemId: Number(b.itemId), qty: Number(b.qty) }));
+    const baris = body.baris.map((b: Record<string, unknown>) => ({
+      itemId: Number(b.itemId),
+      qty: Number(b.qty),
+      harga: b.harga === null || b.harga === undefined || b.harga === "" ? null : Number(b.harga),
+    }));
     const hasil = await transaksiStok((tx) =>
       setStokAwalPeriode(tx, { periode, baris, dibuatOlehId: Number(session.user.id) })
     );

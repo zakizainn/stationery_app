@@ -34,6 +34,7 @@ export default function RestockPage() {
   // Form State
   const [selectedItemId, setSelectedItemId] = useState<string>("");
   const [qty, setQty] = useState<number>(10);
+  const [hargaBeli, setHargaBeli] = useState<string>("");
   const [tanggal, setTanggal] = useState<string>("");
   const [catatan, setCatatan] = useState<string>("");
   const [mode, setMode] = useState<"satu" | "massal">("satu");
@@ -100,6 +101,7 @@ export default function RestockPage() {
         body: JSON.stringify({
           itemId: Number(selectedItemId),
           qty: Number(qty),
+          harga: hargaBeli !== "" ? Number(hargaBeli) : undefined,
           tanggal: tanggal || undefined,
           catatan: catatan.trim() || undefined,
         }),
@@ -113,6 +115,7 @@ export default function RestockPage() {
         setSelectedItemId("");
         setItemSearch("");
         setQty(10);
+        setHargaBeli("");
         setTanggal("");
         setCatatan("");
         fetchData();
@@ -232,6 +235,43 @@ export default function RestockPage() {
                 onChange={(e) => setQty(parseInt(e.target.value) || 1)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-md p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Harga Beli Satuan <span className="font-normal normal-case text-slate-500">(opsional, kosong = pakai harga master{selectedItem ? `: Rp ${selectedItem.harga.toLocaleString("id-ID")}` : ""})</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">Rp</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={hargaBeli}
+                  onChange={(e) => setHargaBeli(e.target.value)}
+                  placeholder={selectedItem ? String(selectedItem.harga) : "Sesuai harga master"}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md py-2.5 pl-9 pr-3 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Membentuk lapisan stok FIFO baru di harga ini tanpa mengubah harga master.
+              </p>
+              {(() => {
+                if (!selectedItem || selectedItem.harga <= 0 || !hargaBeli) return null;
+                const hNum = Number(hargaBeli);
+                if (isNaN(hNum) || hNum <= 0) return null;
+                const isJanggal = hNum > selectedItem.harga * 3 || hNum < selectedItem.harga * 0.3;
+                if (!isJanggal) return null;
+                return (
+                  <div className="mt-2 p-2.5 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2">
+                    <span className="font-bold text-amber-700">⚠️ Peringatan:</span>
+                    <span>
+                      Harga beli (<strong>Rp {hNum.toLocaleString("id-ID")}</strong>) menyimpang jauh dari harga master (
+                      <strong>Rp {selectedItem.harga.toLocaleString("id-ID")}</strong>). Pastikan angka sudah sesuai faktur/nota.
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div>

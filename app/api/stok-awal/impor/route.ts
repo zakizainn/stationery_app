@@ -55,6 +55,8 @@ export async function POST(req: NextRequest) {
       satuan?: string;
       stokSistem?: number;
       stokAwal?: number;
+      harga?: number | null;
+      hargaLapisan?: number | null;
       mutasiBerjalan?: number;
       stokSesudah?: number;
       selisih?: number;
@@ -76,6 +78,9 @@ export async function POST(req: NextRequest) {
         return;
       }
       if ("error" in awal) return void hasil.push({ rowNum, nama: namaRaw, status: "error", pesan: awal.error });
+      // HARGA (opsional): harga per satuan untuk stok yang bertambah. Kosong = harga master.
+      const hargaCol = bacaAngkaBulat(row["HARGA"], "HARGA");
+      if ("error" in hargaCol) return void hasil.push({ rowNum, nama: namaRaw, status: "error", pesan: hargaCol.error });
 
       const m = cocok(namaRaw);
       if (!m.ok) return void hasil.push({ rowNum, nama: namaRaw, status: "error", pesan: m.pesan });
@@ -92,6 +97,7 @@ export async function POST(req: NextRequest) {
         satuan: m.item.satuan,
         stokSistem: m.item.stok,
         stokAwal: "kosong" in awal && !awal.kosong ? awal.nilai : 0,
+        harga: "kosong" in hargaCol && !hargaCol.kosong ? hargaCol.nilai : null,
         status: "ok",
       };
       hasil.push(b);
@@ -100,7 +106,7 @@ export async function POST(req: NextRequest) {
 
     if (valid.length > 0) {
       const rencana = await db.$transaction((tx) =>
-        hitungBaseline(tx, periode, valid.map((b) => ({ itemId: b.itemId!, qty: b.stokAwal! })))
+        hitungBaseline(tx, periode, valid.map((b) => ({ itemId: b.itemId!, qty: b.stokAwal!, harga: b.harga ?? null })))
       );
       const peta = new Map(rencana.map((r) => [r.itemId, r]));
       for (const b of valid) {
@@ -108,6 +114,7 @@ export async function POST(req: NextRequest) {
         b.mutasiBerjalan = r.mutasiBerjalan;
         b.stokSesudah = r.stokSesudah;
         b.selisih = r.stokSesudah - r.stokSebelum;
+        b.hargaLapisan = r.hargaLapisan;
         if (r.stokSesudah < 0) {
           b.status = "error";
           b.pesan = `Stok awal ${r.stokAwal} + mutasi bulan ini ${r.mutasiBerjalan} menjadi negatif.`;

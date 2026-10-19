@@ -67,6 +67,11 @@ interface PerKategoriRow {
   nominalKeluar: number;
 }
 
+interface LapisanDetail {
+  harga: number;
+  qty: number;
+}
+
 interface DetailTransaksiRow {
   id: number;
   tanggal: string;
@@ -77,6 +82,7 @@ interface DetailTransaksiRow {
   qty: number;
   harga: number;
   nominal: number;
+  lapisan?: LapisanDetail[];
   noPengajuan: string | null;
   departemen: string | null;
   pemohon: string | null;
@@ -90,9 +96,16 @@ interface TrenRow {
   nominalKeluar: number;
 }
 
+interface PersediaanRingkasan {
+  nilai: number;
+  qty: number;
+  jumlahBarang: number;
+}
+
 interface LaporanData {
   periode: { year: number; month: number; label: string };
   summary: { totalNominalMasuk: number; totalNominalKeluar: number; totalQtyMasuk: number; totalQtyKeluar: number };
+  persediaan?: PersediaanRingkasan;
   perItem: PerItemRow[];
   perDepartemen: PerDeptRow[];
   perKategori: PerKategoriRow[];
@@ -1029,7 +1042,21 @@ function TabTransaksi({ data, showAll }: { data: LaporanData; showAll: boolean }
                     <td className={`${TD} text-right tabular-nums`}>
                       {angka(row.qty)} {row.satuan}
                     </td>
-                    <td className={`${TD} text-right tabular-nums text-slate-500`}>{rupiah(row.harga)}</td>
+                    <td className={`${TD} text-right tabular-nums text-slate-500`}>
+                      <div>{rupiah(row.harga)}</div>
+                      {row.lapisan && row.lapisan.length > 1 && (
+                        <div className="mt-1 flex flex-col items-end gap-0.5 text-[10px]">
+                          {row.lapisan.map((l, i) => (
+                            <span
+                              key={i}
+                              className="inline-block rounded border border-teal-200 bg-teal-50 px-1.5 py-0.5 font-semibold text-teal-800 whitespace-nowrap"
+                            >
+                              {l.qty} × {rupiah(l.harga)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td className={`${TD} text-right font-semibold tabular-nums ${row.tipe === "masuk" ? TEXT_MASUK : TEXT_KELUAR}`}>
                       {rupiah(row.nominal)}
                     </td>
@@ -1094,8 +1121,8 @@ function LaporanSkeleton() {
   const pulse = "animate-pulse rounded-md bg-slate-200/70 motion-reduce:animate-none";
   return (
     <div className="space-y-4" role="status" aria-label="Memuat laporan">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {[0, 1, 2, 3, 4].map((i) => (
           <div key={i} className={`${pulse} h-32`} />
         ))}
       </div>
@@ -1305,7 +1332,7 @@ export default function LaporanPage() {
           className={`space-y-5 transition-opacity motion-reduce:transition-none ${loading ? "pointer-events-none opacity-50" : ""}`}
         >
           {/* KPI */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <KpiCard
               title="Amount In (restock)"
               value={rupiah(data.summary.totalNominalMasuk)}
@@ -1339,6 +1366,17 @@ export default function LaporanPage() {
               <SplitBar masuk={data.summary.totalNominalMasuk} keluar={data.summary.totalNominalKeluar} />
               {prev && <Delta current={net} previous={prevNet} prevLabel={prev.label} />}
             </KpiCard>
+
+            <KpiCard
+              title="Persediaan Akhir (FIFO)"
+              value={data.persediaan ? rupiah(data.persediaan.nilai) : "Tidak tersedia"}
+              sub={
+                data.persediaan
+                  ? `${angka(data.persediaan.qty)} unit (${angka(data.persediaan.jumlahBarang)} barang)`
+                  : "Aktif mulai periode Okt 2026"
+              }
+              accent="#059669"
+            />
 
             <KpiCard
               title="Jumlah transaksi"

@@ -127,6 +127,7 @@ model Item {
   stockMovements   StockMovement[]
   hargaHistory     HargaHistory[]
   stokAwalBulan    StokAwalBulan[]
+  lapisan          StokLapisan[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -233,6 +234,13 @@ model StockMovement {
   dibuatOlehId  Int?              @map("dibuat_oleh_id")
   dibuatOleh    User?             @relation("StockMovementDibuatOleh", fields: [dibuatOlehId], references: [id])
 
+  // Nilai total movement dalam Rupiah, dihitung FIFO dan DIBEKUKAN saat transaksi.
+  // masuk/penyesuaian_plus = qty x harga lapisan baru; keluar/penyesuaian_minus =
+  // jumlah (qty x harga) tiap lapisan yang dipakai. NULL = movement lama sebelum FIFO
+  // (dihitung qty x hargaSaatTransaksi seperti dulu).
+  nilai             Int?
+  lapisanPemakaian  LapisanPemakaian[]
+
   @@index([itemId, tanggal])
   @@map("stock_movement")
 }
@@ -265,4 +273,39 @@ model StokAwalBulan {
 
   @@unique([periode, itemId])
   @@map("stok_awal_bulan")
+}
+
+// Lapisan stok FIFO. Setiap barang masuk (restock, stok awal, penyesuaian tambah)
+// membentuk satu lapisan dengan harga belinya. Barang keluar mengambil dari lapisan
+// TERLAMA dulu (tanggal, lalu id). Aturan tetap: SUM(sisaQty) per barang == Item.stok.
+model StokLapisan {
+  id        Int      @id @default(autoincrement())
+  itemId    Int      @map("item_id")
+  item      Item     @relation(fields: [itemId], references: [id])
+  qtyAwal   Int      @map("qty_awal")
+  sisaQty   Int      @map("sisa_qty")
+  harga     Int                              // harga per satuan lapisan ini
+  tanggal   DateTime @default(now())         // menentukan urutan FIFO
+  sumber    String   @default("restock")     // restock | restock_massal | impor | stok_awal | baseline | migrasi | penyesuaian | penyeimbang
+  createdAt DateTime @default(now()) @map("created_at")
+  pemakaian LapisanPemakaian[]
+
+  @@index([itemId, tanggal, id])
+  @@map("stok_lapisan")
+}
+
+// Catatan lapisan mana yang dipakai oleh sebuah movement keluar, beserta harganya
+// saat itu. Dasar rincian "berapa unit di harga berapa" pada Laporan.
+model LapisanPemakaian {
+  id         Int           @id @default(autoincrement())
+  movementId Int           @map("movement_id")
+  movement   StockMovement @relation(fields: [movementId], references: [id])
+  lapisanId  Int           @map("lapisan_id")
+  lapisan    StokLapisan   @relation(fields: [lapisanId], references: [id])
+  qty        Int
+  harga      Int
+
+  @@index([movementId])
+  @@index([lapisanId])
+  @@map("lapisan_pemakaian")
 }

@@ -12,6 +12,8 @@ interface BarisPratinjau {
   satuan?: string;
   stokSistem?: number;
   stokAwal?: number;
+  harga?: number | null;
+  hargaLapisan?: number | null;
   mutasiBerjalan?: number;
   stokSesudah?: number;
   selisih?: number;
@@ -126,7 +128,7 @@ export default function StokAwalPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           periode: pratinjau.periode,
-          baris: valid.map((b) => ({ itemId: b.itemId, qty: b.stokAwal })),
+          baris: valid.map((b) => ({ itemId: b.itemId, qty: b.stokAwal, harga: b.harga ?? null })),
         }),
       });
       const json = await res.json();
@@ -211,7 +213,9 @@ export default function StokAwalPage() {
               <DownloadSimple size={14} aria-hidden="true" />
               Unduh template
             </a>
-            <span className="text-slate-600">Isi kolom STOK_AWAL dengan stok fisik pada tanggal 1 periode. Baris yang dikosongkan tidak diubah.</span>
+            <span className="text-slate-600">
+              Isi kolom STOK_AWAL dengan stok fisik pada tanggal 1 periode, dan kolom HARGA (opsional) untuk harga lapisan baru. Baris yang dikosongkan tidak diubah.
+            </span>
           </li>
           <li className="flex flex-wrap items-center gap-3">
             <span className="font-bold text-slate-900">2.</span>
@@ -287,13 +291,14 @@ export default function StokAwalPage() {
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[820px] text-left text-xs">
+              <table className="w-full min-w-[880px] text-left text-xs">
                 <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
                   <tr>
                     <th scope="col" className="py-2.5 px-3">Excel</th>
                     <th scope="col" className="py-2.5 px-3">Barang</th>
                     <th scope="col" className="py-2.5 px-3 text-right">Stok sistem</th>
                     <th scope="col" className="py-2.5 px-3 text-right">Stok awal</th>
+                    <th scope="col" className="py-2.5 px-3 text-right">Harga lapisan</th>
                     <th scope="col" className="py-2.5 px-3 text-right">Mutasi bulan ini</th>
                     <th scope="col" className="py-2.5 px-3 text-right">Stok hasil</th>
                     <th scope="col" className="py-2.5 px-3 text-right">Selisih</th>
@@ -311,6 +316,11 @@ export default function StokAwalPage() {
                         <>
                           <td className="py-2.5 px-3 text-right tabular-nums text-slate-600 align-top">{b.stokSistem?.toLocaleString("id-ID")} {b.satuan}</td>
                           <td className="py-2.5 px-3 text-right tabular-nums font-bold text-slate-900 align-top">{b.stokAwal?.toLocaleString("id-ID")}</td>
+                          <td className="py-2.5 px-3 text-right tabular-nums text-teal-800 font-semibold align-top">
+                            {b.hargaLapisan !== undefined && b.hargaLapisan !== null
+                              ? `Rp ${b.hargaLapisan.toLocaleString("id-ID")}`
+                              : "-"}
+                          </td>
                           <td className="py-2.5 px-3 text-right tabular-nums text-slate-600 align-top">{tandaSelisih(b.mutasiBerjalan ?? 0)}</td>
                           <td className="py-2.5 px-3 text-right tabular-nums font-bold text-slate-900 align-top">{b.stokSesudah?.toLocaleString("id-ID")}</td>
                           <td
@@ -322,7 +332,7 @@ export default function StokAwalPage() {
                           </td>
                         </>
                       ) : (
-                        <td colSpan={5} />
+                        <td colSpan={6} />
                       )}
                     </tr>
                   ))}
