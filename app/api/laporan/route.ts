@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { nilaiMovement, nominalMovement } from "@/lib/laporan-nilai";
+import { PERIODE_MULAI_FIFO, persediaanPada } from "@/lib/persediaan";
 import { getKategoriLabel } from "@/lib/kategori";
+import { awalBulanWIB } from "@/lib/waktu";
 
 // Laporan Amount In / Out hanya menghitung PEMBELIAN (masuk) dan PEMAKAIAN (keluar).
 // Movement "penyesuaian_*" (STO, edit manual, stok awal) adalah koreksi stok,
@@ -26,13 +29,19 @@ export async function GET(req: NextRequest) {
       ? monthParam.split("-").map(Number)
       : [now.getFullYear(), now.getMonth() + 1];
 
-    const start = new Date(year, month - 1, 1);
-    const end = new Date(year, month, 1); // awal bulan berikutnya (exclusive)
+    // Batas bulan diselaraskan ke jam WIB (Asia/Jakarta, UTC+7), bukan zona waktu server.
+    const periodeKey = `${year}-${String(month).padStart(2, "0")}`;
+    const nextYear = month === 12 ? year + 1 : year;
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextPeriodeKey = `${nextYear}-${String(nextMonth).padStart(2, "0")}`;
+    const start = awalBulanWIB(periodeKey);
+    const end = awalBulanWIB(nextPeriodeKey); // awal bulan berikutnya pukul 00:00 WIB (exclusive)
 
     const movements = await db.stockMovement.findMany({
       where: { tanggal: { gte: start, lt: end }, tipe: { in: TIPE_LAPORAN } },
       include: {
         item: true,
+        lapisanPemakaian: { select: { qty: true, harga: true } },
         refRequest: {
           include: {
             departemen: { select: { id: true, nama: true, kode: true } },
@@ -77,8 +86,14 @@ export async function GET(req: NextRequest) {
       // Pakai harga snapshot saat transaksi (bukan mv.item.harga yang bisa berubah
       // kalau admin edit harga item sekarang) -- supaya laporan bulan lalu tidak
       // ikut berubah gara-gara harga terbaru.
-      const hargaTransaksi = mv.hargaSaatTransaksi || mv.item.harga;
-      const nominal = mv.qty * hargaTransaksi;
+      // Nilai movement: barang keluar dihitung FIFO dari rincian lapisan yang dipakai,
+      // barang masuk dari harga belinya. Movement lama (sebelum FIFO) tetap dihitung
+      // cara lama (harga snapshot). Satu modul dipakai bersama Excel -- lib/laporan-nilai.ts.
+      const nv = nilaiMovement(mv);
+      const hargaTransaksi = nv.hargaRata;
+      const nominal = nv.nominal;
+      const hargaTerendah = Math.min(...nv.bagian.map((b) => b.harga));
+      const hargaTertinggi = Math.max(...nv.bagian.map((b) => b.harga));
 
       if (!perItemMap.has(mv.itemId)) {
         perItemMap.set(mv.itemId, {
@@ -86,8 +101,8 @@ export async function GET(req: NextRequest) {
           nama: mv.item.nama,
           kategori: mv.item.kategori,
           satuan: mv.item.satuan,
-          hargaMin: hargaTransaksi,
-          hargaMax: hargaTransaksi,
+          hargaMin: hargaTerendah,
+          hargaMax: hargaTertinggi,
           qtyMasuk: 0,
           nominalMasuk: 0,
           qtyKeluar: 0,
@@ -98,15 +113,19 @@ export async function GET(req: NextRequest) {
       // Catat rentang harga -- kalau harga sempat berubah di tengah periode
       // (mis. restock pertama Rp550, restock kedua Rp750), tabel perlu nunjukin
       // rentangnya, bukan cuma harga transaksi pertama yang ketemu.
-      row.hargaMin = Math.min(row.hargaMin, hargaTransaksi);
-      row.hargaMax = Math.max(row.hargaMax, hargaTransaksi);
+      row.hargaMin = Math.min(row.hargaMin, hargaTerendah);
+      row.hargaMax = Math.max(row.hargaMax, hargaTertinggi);
 
       if (!breakdownMap.has(mv.itemId)) breakdownMap.set(mv.itemId, new Map());
       const itemBreakdown = breakdownMap.get(mv.itemId)!;
-      if (!itemBreakdown.has(hargaTransaksi)) {
-        itemBreakdown.set(hargaTransaksi, { harga: hargaTransaksi, qtyMasuk: 0, nominalMasuk: 0, qtyKeluar: 0, nominalKeluar: 0 });
-      }
-      const priceRow = itemBreakdown.get(hargaTransaksi)!;
+      // Satu movement keluar bisa memakai beberapa lapisan (harga berbeda): satu baris
+      // rincian per harga, sehingga "berapa unit di harga berapa" terlihat jelas.
+      const priceRows = nv.bagian.map((b) => {
+        if (!itemBreakdown.has(b.harga)) {
+          itemBreakdown.set(b.harga, { harga: b.harga, qtyMasuk: 0, nominalMasuk: 0, qtyKeluar: 0, nominalKeluar: 0 });
+        }
+        return { pr: itemBreakdown.get(b.harga)!, b };
+      });
 
       if (!perKategoriMap.has(mv.item.kategori)) {
         perKategoriMap.set(mv.item.kategori, {
@@ -123,8 +142,10 @@ export async function GET(req: NextRequest) {
       if (mv.tipe === "masuk") {
         row.qtyMasuk += mv.qty;
         row.nominalMasuk += nominal;
-        priceRow.qtyMasuk += mv.qty;
-        priceRow.nominalMasuk += nominal;
+        for (const { pr, b } of priceRows) {
+          pr.qtyMasuk += b.qty;
+          pr.nominalMasuk += b.qty * b.harga;
+        }
         kategoriRow.qtyMasuk += mv.qty;
         kategoriRow.nominalMasuk += nominal;
         totalQtyMasuk += mv.qty;
@@ -132,8 +153,10 @@ export async function GET(req: NextRequest) {
       } else {
         row.qtyKeluar += mv.qty;
         row.nominalKeluar += nominal;
-        priceRow.qtyKeluar += mv.qty;
-        priceRow.nominalKeluar += nominal;
+        for (const { pr, b } of priceRows) {
+          pr.qtyKeluar += b.qty;
+          pr.nominalKeluar += b.qty * b.harga;
+        }
         kategoriRow.qtyKeluar += mv.qty;
         kategoriRow.nominalKeluar += nominal;
         totalQtyKeluar += mv.qty;
@@ -155,7 +178,7 @@ export async function GET(req: NextRequest) {
     // karena diinput langsung oleh admin stationery.
     const detailTransaksi = movements
       .map((mv) => {
-        const hargaTransaksi = mv.hargaSaatTransaksi || mv.item.harga;
+        const nv = nilaiMovement(mv);
         return {
           id: mv.id,
           tanggal: mv.tanggal,
@@ -164,8 +187,10 @@ export async function GET(req: NextRequest) {
           kategori: mv.item.kategori,
           satuan: mv.item.satuan,
           qty: mv.qty,
-          harga: hargaTransaksi,
-          nominal: mv.qty * hargaTransaksi,
+          harga: nv.hargaRata,
+          nominal: nv.nominal,
+          // Pembagian per harga (FIFO). Satu elemen untuk barang masuk / movement lama.
+          lapisan: nv.bagian,
           noPengajuan: mv.refRequest?.noPengajuan ?? null,
           departemen: mv.refRequest?.departemen?.nama ?? null,
           pemohon: mv.refRequest?.user?.nama ?? null,
@@ -184,28 +209,36 @@ export async function GET(req: NextRequest) {
       (a, b) => b.nominalMasuk + b.nominalKeluar - (a.nominalMasuk + a.nominalKeluar)
     );
 
-    // Tren 6 bulan terakhir (termasuk bulan yang dipilih) -- dipakai buat grafik
-    // tren di dashboard visualisasi. Sengaja query terpisah dari `movements` di
-    // atas (yang scope-nya cuma 1 bulan) supaya query utama tetap ringan.
+    // Tren 6 bulan terakhir (termasuk bulan yang dipilih) -- dihitung dalam zona WIB
     const TREND_MONTHS = 6;
-    const trendStart = new Date(year, month - 1 - (TREND_MONTHS - 1), 1);
+    let trendStartYear = year;
+    let trendStartMonth = month - (TREND_MONTHS - 1);
+    while (trendStartMonth <= 0) {
+      trendStartMonth += 12;
+      trendStartYear -= 1;
+    }
+    const trendStart = awalBulanWIB(`${trendStartYear}-${String(trendStartMonth).padStart(2, "0")}`);
     const trendMovements = await db.stockMovement.findMany({
       where: { tanggal: { gte: trendStart, lt: end }, tipe: { in: TIPE_LAPORAN } },
-      select: { tanggal: true, tipe: true, qty: true, hargaSaatTransaksi: true, item: { select: { harga: true } } },
+      select: { tanggal: true, tipe: true, qty: true, nilai: true, hargaSaatTransaksi: true, item: { select: { harga: true } } },
     });
 
     const trenMap = new Map<
       string,
       { year: number; month: number; label: string; nominalMasuk: number; nominalKeluar: number }
     >();
-    // Inisialisasi semua 6 bulan dengan 0 dulu -- supaya bulan tanpa transaksi
-    // tetap muncul di grafik (bukan bolong), bukan cuma bulan yang ada datanya.
     for (let i = TREND_MONTHS - 1; i >= 0; i--) {
-      const d = new Date(year, month - 1 - i, 1);
-      const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
+      let tMonth = month - i;
+      let tYear = year;
+      while (tMonth <= 0) {
+        tMonth += 12;
+        tYear -= 1;
+      }
+      const key = `${tYear}-${tMonth}`;
+      const d = awalBulanWIB(`${tYear}-${String(tMonth).padStart(2, "0")}`);
       trenMap.set(key, {
-        year: d.getFullYear(),
-        month: d.getMonth() + 1,
+        year: tYear,
+        month: tMonth,
         label: d.toLocaleDateString("id-ID", { month: "short", year: "2-digit" }),
         nominalMasuk: 0,
         nominalKeluar: 0,
@@ -215,17 +248,37 @@ export async function GET(req: NextRequest) {
       const key = `${mv.tanggal.getFullYear()}-${mv.tanggal.getMonth() + 1}`;
       const row = trenMap.get(key);
       if (!row) continue;
-      const hargaTransaksi = mv.hargaSaatTransaksi || mv.item.harga;
-      const nominal = mv.qty * hargaTransaksi;
+      const nominal = nominalMovement(mv);
       if (mv.tipe === "masuk") row.nominalMasuk += nominal;
       else row.nominalKeluar += nominal;
     }
     const tren = Array.from(trenMap.values());
 
+    // Rekonstruksi persediaan FIFO hanya valid untuk periode setelah sistem FIFO aktif.
+    // Periode sebelum PERIODE_MULAI_FIFO tidak memiliki catatan lapisan pemakaian historis.
+    const isFifoAktif = periodeKey >= PERIODE_MULAI_FIFO;
+    let persediaan: { nilai: number; qty: number; jumlahBarang: number; aktif: boolean } | null = null;
+    if (isFifoAktif) {
+      const persediaanMap = await persediaanPada(end);
+      let persediaanNilai = 0;
+      let persediaanQty = 0;
+      for (const p of persediaanMap.values()) {
+        persediaanNilai += p.nilai;
+        persediaanQty += p.qty;
+      }
+      persediaan = {
+        nilai: persediaanNilai,
+        qty: persediaanQty,
+        jumlahBarang: persediaanMap.size,
+        aktif: true,
+      };
+    }
+
     return NextResponse.json({
       success: true,
       periode: { year, month, label: start.toLocaleDateString("id-ID", { month: "long", year: "numeric" }) },
       summary: { totalNominalMasuk, totalNominalKeluar, totalQtyMasuk, totalQtyKeluar },
+      persediaan,
       perItem,
       perDepartemen,
       perKategori,

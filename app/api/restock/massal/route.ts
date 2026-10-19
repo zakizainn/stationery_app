@@ -5,7 +5,7 @@ import { StokError, statusHttpStokError, transaksiStok, ubahStokMasukBanyak, typ
 import { hariIniWIB, tanggalWIBKeDate } from "@/lib/waktu";
 
 const ALLOWED_ROLES = ["admin_stationery", "superadmin"];
-const HARI_MAKS_MUNDUR = 366;
+const HARI_MAKS_MUNDUR = 60;
 
 // POST: simpan restock banyak barang sekaligus dalam SATU transaksi.
 // Body: { tanggal?: "YYYY-MM-DD", catatan?: string, baris: [{ itemId, qty, harga? }] }
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: "Tanggal restock tidak boleh di masa depan." }, { status: 400 });
       }
       if (Date.now() - d.getTime() > HARI_MAKS_MUNDUR * 86_400_000) {
-        return NextResponse.json({ success: false, error: "Tanggal restock terlalu lama (maksimal 1 tahun ke belakang)." }, { status: 400 });
+        return NextResponse.json({ success: false, error: `Tanggal restock terlalu lama (maksimal ${HARI_MAKS_MUNDUR} hari ke belakang).` }, { status: 400 });
       }
       tanggal = d;
     }

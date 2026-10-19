@@ -3,7 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { StokError, statusHttpStokError, transaksiStok, ubahStok } from "@/lib/stok";
-import { tanggalWIBKeDate } from "@/lib/waktu";
+import { hariIniWIB, tanggalWIBKeDate } from "@/lib/waktu";
+
+const HARI_MAKS_MUNDUR = 60;
 
 export async function GET(_req: NextRequest) {
   try {
@@ -47,6 +49,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { itemId, tanggal, catatan } = body;
     const qty = Number(body.qty);
+    // Harga beli per satuan (opsional). Kosong = harga master. Membentuk lapisan FIFO
+    // berharga ini; TIDAK mengubah harga master barang.
+    const harga = body.harga === undefined || body.harga === null || body.harga === "" ? null : Number(body.harga);
 
     if (!itemId || !Number.isInteger(qty) || qty <= 0) {
       return NextResponse.json(
@@ -58,9 +63,16 @@ export async function POST(req: NextRequest) {
     // Tanggal opsional (YYYY-MM-DD, WIB) -- untuk mencatat barang yang datang di hari sebelumnya.
     let tanggalMasuk: Date | undefined;
     if (tanggal) {
-      const d = tanggalWIBKeDate(String(tanggal));
+      const t = String(tanggal);
+      const d = tanggalWIBKeDate(t);
       if (!d) {
         return NextResponse.json({ success: false, error: "Format tanggal tidak valid (gunakan YYYY-MM-DD)." }, { status: 400 });
+      }
+      if (t > hariIniWIB()) {
+        return NextResponse.json({ success: false, error: "Tanggal restock tidak boleh di masa depan." }, { status: 400 });
+      }
+      if (Date.now() - d.getTime() > HARI_MAKS_MUNDUR * 86_400_000) {
+        return NextResponse.json({ success: false, error: `Tanggal restock terlalu lampau (maksimal ${HARI_MAKS_MUNDUR} hari ke belakang).` }, { status: 400 });
       }
       tanggalMasuk = d;
     }
@@ -71,6 +83,7 @@ export async function POST(req: NextRequest) {
         tipe: "masuk",
         qty,
         sumber: "restock",
+        harga,
         tanggal: tanggalMasuk,
         catatan: catatan ? String(catatan) : null,
         dibuatOlehId: Number(session.user.id),

@@ -99,7 +99,8 @@ export async function POST(req: NextRequest) {
                   tipe: "keluar",
                   qty: finalQty,
                   sumber: "pengajuan",
-                  harga: reqItem.item.harga,
+                  // Nilai barang keluar ditentukan lapisan FIFO (yang terlama dulu),
+                  // bukan harga master -- jadi tidak ada harga yang dikirim di sini.
                   refRequestId: request.id,
                   dibuatOlehId: Number(session.user.id),
                 });
