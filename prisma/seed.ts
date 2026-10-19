@@ -1,7 +1,9 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const db = new PrismaClient({ adapter });
@@ -38,6 +40,7 @@ const DEPARTEMEN_KODE = [
 // (bukan departemen operasional perusahaan, cuma penampung akun sistem).
 
 async function main() {
+  if (process.env.NODE_ENV === "production") throw new Error("Seed akun contoh dilarang dijalankan di production.");
   const deptRecords: Record<string, { id: number }> = {};
 
   for (const kode of DEPARTEMEN_KODE) {
@@ -54,7 +57,8 @@ async function main() {
     create: { nama: "Stationery (internal)", kode: "STAT" },
   });
 
-  const passwordHash = await bcrypt.hash("password123", 10);
+  // Akun contoh tidak memakai password bawaan yang dapat diketahui/diulang.
+  const passwordHash = await bcrypt.hash(randomBytes(32).toString("base64url"), 12);
 
   await db.user.upsert({
     where: { nik: "22071" },
@@ -325,10 +329,9 @@ async function main() {
     { nama: "BATERAI KANCING LR1130 MAXELL", kategori: "barang_umum", satuan: "pcs", stok: 0, stokMinimum: 10 },
   ] as const;
 
-  await db.item.createMany({ data: items as any, skipDuplicates: true });
+  await db.item.createMany({ data: items as unknown as Prisma.ItemCreateManyInput[], skipDuplicates: true });
 
   console.log(`Seed selesai: ${DEPARTEMEN_KODE.length + 1} departemen, 4 user, ${items.length} item.`);
-  console.log("Password default semua akun contoh: password123");
 }
 
 main()

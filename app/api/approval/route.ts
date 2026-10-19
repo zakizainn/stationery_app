@@ -1,11 +1,10 @@
+import { getAuthSession } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     if (!session || !["atasan_departemen", "superadmin"].includes(session.user.role)) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
@@ -34,6 +33,10 @@ export async function POST(req: NextRequest) {
 
     if (!request) {
       return NextResponse.json({ success: false, error: "Pengajuan tidak ditemukan" }, { status: 404 });
+    }
+
+    if (session.user.role === "atasan_departemen" && request.departemenId !== session.user.departemenId) {
+      return NextResponse.json({ success: false, error: "Pengajuan tidak ditemukan." }, { status: 404 });
     }
 
     const level = session.user.role === "atasan_departemen" ? 1 : 2;

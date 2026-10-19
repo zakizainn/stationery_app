@@ -21,7 +21,7 @@ const ROUTE_ACCESS: Record<string, Role[]> = {
   "/departemen": ["superadmin"],
 };
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const token = await getToken({ req });
 
@@ -29,6 +29,9 @@ export async function middleware(req: NextRequest) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+  if (token.accountBlocked) {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   const role = token.role as Role;

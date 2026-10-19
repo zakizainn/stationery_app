@@ -1,6 +1,5 @@
+import { getAuthSession } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as XLSX from "xlsx";
 import { transaksiStok, ubahStok } from "@/lib/stok";
@@ -26,7 +25,7 @@ function normalizeBoolean(raw: unknown): boolean {
 // STOK_MASUK untuk restock massal, atau field lain untuk update massal).
 // Kalau database masih kosong, unduh template kosong dengan 3 baris contoh.
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
   }
@@ -93,7 +92,7 @@ export async function GET() {
 // - Item baru: dibuat dengan stok awal = STOK_MASUK (boleh 0), field lain wajib.
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }

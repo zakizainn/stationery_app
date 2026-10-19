@@ -1,6 +1,5 @@
+import { getAuthSession } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getKategoriLabel } from "@/lib/kategori";
 import {
@@ -18,7 +17,7 @@ const ALLOWED_ROLES = ["admin_stationery", "superadmin"];
 // kolom QTY (dan HARGA bila harga beli berbeda) untuk barang yang datang;
 // baris dengan QTY kosong diabaikan.
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
   }
@@ -49,7 +48,7 @@ export async function GET() {
 // statusnya supaya admin bisa memeriksa sebelum menyimpan.
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }

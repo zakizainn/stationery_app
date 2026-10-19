@@ -1,6 +1,5 @@
+import { getAuthSession } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { StokError, statusHttpStokError, transaksiStok, ubahStokMasukBanyak, type BarisMasuk } from "@/lib/stok";
 import { hariIniWIB, tanggalWIBKeDate } from "@/lib/waktu";
 
@@ -12,7 +11,7 @@ const HARI_MAKS_MUNDUR = 366;
 // Semua baris berhasil atau semuanya dibatalkan.
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }

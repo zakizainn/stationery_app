@@ -67,8 +67,10 @@ model User {
   id            Int    @id @default(autoincrement())
   nik           String @unique
   nama          String
+  email         String? @unique
   passwordHash  String @map("password_hash")
   role          Role
+  requestedRole Role?   @map("requested_role")
   aktif         Boolean @default(true) // soft-delete: user yg pernah mengajukan/menyetujui/memiliki riwayat tidak boleh dihapus permanen (FK ke Request/Approval), cuma dinonaktifkan & tidak bisa login lagi
   departemenId  Int    @map("departemen_id")
   departemen    Departemen @relation(fields: [departemenId], references: [id])
@@ -78,10 +80,32 @@ model User {
   notifications   Notification[]
   hargaHistoryDiubah HargaHistory[]
   stockMovementsDibuat StockMovement[] @relation("StockMovementDibuatOleh")
+  authTokens AuthToken[]
 
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("user")
+}
+
+model AuthToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   String
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([purpose, createdAt])
+  @@map("auth_token")
+}
+
+model AuthAttempt {
+  id        Int      @id @default(autoincrement())
+  key       String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([key, createdAt])
+  @@map("auth_attempt")
 }
 
 model Item {

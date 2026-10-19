@@ -53,6 +53,10 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       const authUser = user as AuthorizedUser | undefined;
+      if (token.id && !authUser) {
+        const current = await db.user.findUnique({ where: { id: Number(token.id) }, select: { aktif: true } });
+        token.accountBlocked = !current?.aktif;
+      }
       if (authUser) {
         token.id = authUser.id;
         token.role = authUser.role;
@@ -63,6 +67,7 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      session.accountBlocked = Boolean(token.accountBlocked);
       session.user.id = token.id;
       session.user.role = token.role;
       session.user.nik = token.nik;

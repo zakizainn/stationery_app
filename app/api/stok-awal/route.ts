@@ -1,6 +1,5 @@
+import { getAuthSession } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getKategoriLabel } from "@/lib/kategori";
 import { MIME_XLSX, buatXlsx } from "@/lib/excelItem";
@@ -16,7 +15,7 @@ function periodeDariQuery(raw: string | null): string {
 // GET ?periode=YYYY-MM            -> status: sudah berapa barang yang punya stok awal di periode itu
 // GET ?periode=YYYY-MM&template=1 -> unduh template Excel (isi kolom STOK_AWAL)
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
   }
@@ -59,7 +58,7 @@ export async function GET(req: NextRequest) {
 // Satu transaksi: semua barang atau tidak sama sekali.
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }

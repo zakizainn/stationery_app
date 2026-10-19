@@ -1,6 +1,5 @@
+import { getAuthSession } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { UKURAN_FILE_MAKS, bacaAngkaBulat, bacaBarisExcel, buatPencocok } from "@/lib/excelItem";
 import { StokError, hitungBaseline, statusHttpStokError } from "@/lib/stok";
@@ -13,7 +12,7 @@ const ALLOWED_ROLES = ["admin_stationery", "superadmin"];
 // bulan berjalan, dan stok hasil akhir yang akan diterapkan.
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     if (!session || !ALLOWED_ROLES.includes(session.user.role)) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }

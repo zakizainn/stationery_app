@@ -15,39 +15,32 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e?: React.FormEvent, customNik?: string, customPassword?: string) {
+  async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setError("");
     setLoading(true);
 
-    const targetNik = customNik ?? nik;
-    const targetPassword = customPassword ?? password;
+    try {
+      const res = await signIn("credentials", { nik, password, redirect: false });
+      if (res?.error || !res?.ok) {
+        setError("NIK atau password tidak valid, atau akun sedang tidak aktif.");
+        return;
+      }
 
-    const res = await signIn("credentials", {
-      nik: targetNik,
-      password: targetPassword,
-      redirect: false,
-    });
-
-    setLoading(false);
-
-    if (res?.error) {
-      setError("NIK atau password tidak valid.");
-      return;
+      const callbackUrl = searchParams.get("callbackUrl");
+      let destination = "/";
+      if (callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//")) {
+        const parsed = new URL(callbackUrl, window.location.origin);
+        if (parsed.origin === window.location.origin) destination = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      router.replace(destination);
+      router.refresh();
+    } catch {
+      setError("Login gagal diproses. Silakan coba lagi.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push(searchParams.get("callbackUrl") ?? "/");
-    router.refresh();
   }
-
-  const showDemoLogin = process.env.NODE_ENV !== "production";
-
-  const demoAccounts = [
-    { label: "Staf (QA)", nik: "22071", pass: "password123" },
-    { label: "Atasan (QA)", nik: "11769", pass: "password123" },
-    { label: "Admin Stationery", nik: "90002", pass: "password123" },
-    { label: "Superadmin", nik: "90001", pass: "password123" },
-  ];
 
   return (
     <div className="min-h-[100dvh] grid lg:grid-cols-2 bg-canvas font-sans">
@@ -144,34 +137,10 @@ function LoginForm() {
             </button>
           </form>
 
-          {showDemoLogin && (
-            <div className="mt-8 pt-6 border-t border-slate-200">
-              <div className="text-xs font-semibold text-slate-600 text-center mb-3">
-                Quick Demo Login (Uji Coba 1-Klik)
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {demoAccounts.map((acc) => (
-                  <button
-                    key={acc.nik}
-                    type="button"
-                    onClick={() => {
-                      setNik(acc.nik);
-                      setPassword(acc.pass);
-                      handleSubmit(undefined, acc.nik, acc.pass);
-                    }}
-                    className="p-2.5 rounded-md border border-slate-200 hover:border-brand-600 text-left transition-colors bg-slate-50 hover:bg-white group cursor-pointer"
-                  >
-                    <div className="text-xs font-bold text-slate-800 group-hover:text-brand-700">
-                      {acc.label}
-                    </div>
-                    <div className="text-xs text-slate-600 mt-0.5">
-                      NIK: <span className="font-mono">{acc.nik}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="mt-5 flex justify-between gap-3 text-sm">
+            <a className="text-brand-700 hover:underline" href="/forgot-password">Lupa password?</a>
+            <a className="text-brand-700 hover:underline" href="/daftar">Daftar akun</a>
+          </div>
         </div>
       </main>
     </div>

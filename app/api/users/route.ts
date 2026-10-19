@@ -1,13 +1,12 @@
+import { getAuthSession } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     if (!session || session.user.role !== "superadmin") {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
@@ -17,7 +16,9 @@ export async function GET() {
         id: true,
         nik: true,
         nama: true,
+        email: true,
         role: true,
+        requestedRole: true,
         aktif: true,
         departemenId: true,
         departemen: { select: { id: true, nama: true, kode: true } },
@@ -38,21 +39,26 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     if (!session || session.user.role !== "superadmin") {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
 
     const body = await req.json();
-    const { nik, nama, password, role, departemenId } = body;
+    const { nik, nama, email, password, role, departemenId } = body;
 
-    if (!nik || !nama || !password || !role || !departemenId) {
+    if (!nik || !nama || !email || !password || !role || !departemenId) {
       return NextResponse.json(
-        { success: false, error: "NIK, Nama, Password, Role, dan Departemen wajib diisi." },
+        { success: false, error: "NIK, Nama, email kerja, Password, Role, dan Departemen wajib diisi." },
         { status: 400 }
       );
     }
+    if (String(password).length < 10 || String(password).length > 128) return NextResponse.json({ success: false, error: "Password harus 10–128 karakter." }, { status: 400 });
 
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return NextResponse.json({ success: false, error: "Format email tidak valid." }, { status: 400 });
+    const existingEmail = await db.user.findUnique({ where: { email: normalizedEmail } });
+    if (existingEmail) return NextResponse.json({ success: false, error: "Email sudah digunakan." }, { status: 400 });
     const existingUser = await db.user.findUnique({ where: { nik } });
     if (existingUser) {
       return NextResponse.json({ success: false, error: "NIK sudah terdaftar." }, { status: 400 });
@@ -64,6 +70,7 @@ export async function POST(req: NextRequest) {
       data: {
         nik,
         nama,
+        email: normalizedEmail,
         passwordHash,
         role: role as Role,
         departemenId: Number(departemenId),
@@ -74,6 +81,7 @@ export async function POST(req: NextRequest) {
         nama: true,
         role: true,
         departemenId: true,
+        email: true,
         departemen: { select: { nama: true } },
       },
     });

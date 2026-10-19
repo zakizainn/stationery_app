@@ -2,6 +2,7 @@ import { Role } from "@/types";
 
 declare module "next-auth" {
   interface Session {
+    accountBlocked?: boolean;
     user: {
       id: string;
       name: string;

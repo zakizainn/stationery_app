@@ -8,7 +8,9 @@ interface User {
   id: number;
   nik: string;
   nama: string;
+  email: string | null;
   role: string;
+  requestedRole?: string | null;
   aktif: boolean;
   departemenId: number;
   departemen?: { nama: string; kode: string };
@@ -30,6 +32,7 @@ export default function UsersManagementPage() {
   // Form
   const [nik, setNik] = useState("");
   const [nama, setNama] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("staf");
   const [departemenId, setDepartemenId] = useState<string>("");
@@ -57,13 +60,15 @@ export default function UsersManagementPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    const task = window.setTimeout(() => { void fetchData(); }, 0);
+    return () => window.clearTimeout(task);
   }, []);
 
   const openCreateModal = () => {
     setEditingUser(null);
     setNik("");
     setNama("");
+    setEmail("");
     setPassword("");
     setRole("staf");
     if (departemens.length > 0) setDepartemenId(String(departemens[0].id));
@@ -74,6 +79,7 @@ export default function UsersManagementPage() {
     setEditingUser(u);
     setNik(u.nik);
     setNama(u.nama);
+    setEmail(u.email || "");
     setPassword("");
     setRole(u.role);
     setDepartemenId(String(u.departemenId));
@@ -91,6 +97,7 @@ export default function UsersManagementPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             nama,
+            email,
             role,
             departemenId: Number(departemenId),
             newPassword: password || undefined,
@@ -103,6 +110,7 @@ export default function UsersManagementPage() {
           body: JSON.stringify({
             nik,
             nama,
+            email,
             password,
             role,
             departemenId: Number(departemenId),
@@ -158,6 +166,17 @@ export default function UsersManagementPage() {
     }
   };
 
+  const handleRoleRequest = async (userId: number, action: "approve" | "reject") => {
+    const response = await fetch(`/api/users/${userId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    const result = await response.json();
+    if (result.success) fetchData();
+    else alert(result.error || "Permintaan role gagal diproses.");
+  };
+
   const ROLE_BADGES: Record<string, string> = {
     staf: "bg-brand-50 text-brand-800 border-brand-200",
     atasan_departemen: "bg-slate-100 text-slate-700 border-slate-300",
@@ -195,7 +214,9 @@ export default function UsersManagementPage() {
                 <tr>
                   <th className="py-3.5 px-4">NIK</th>
                   <th className="py-3.5 px-4">Nama Pengguna</th>
+                  <th className="py-3.5 px-4">Email Kerja</th>
                   <th className="py-3.5 px-4">Role</th>
+                  <th className="py-3.5 px-4">Permintaan Role</th>
                   <th className="py-3.5 px-4">Departemen</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4 text-right">Aksi</th>
@@ -206,10 +227,22 @@ export default function UsersManagementPage() {
                   <tr key={u.id} className={`hover:bg-slate-50/80 ${!u.aktif ? "opacity-60" : ""}`}>
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{u.nik}</td>
                     <td className="py-3.5 px-4 font-bold text-slate-800">{u.nama}</td>
+                    <td className="py-3.5 px-4 text-slate-600">
+                      <div>{u.email || "Belum diisi"}</div>
+                    </td>
                     <td className="py-3.5 px-4">
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${ROLE_BADGES[u.role] || "bg-slate-100"}`}>
                         {u.role}
                       </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {u.requestedRole ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold">{u.requestedRole}</span>
+                          <button onClick={() => handleRoleRequest(u.id, "approve")} className="font-bold text-emerald-700 hover:underline">Setujui</button>
+                          <button onClick={() => handleRoleRequest(u.id, "reject")} className="font-bold text-rose-700 hover:underline">Tolak</button>
+                        </div>
+                      ) : <span className="text-slate-400">-</span>}
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-slate-600">{u.departemen?.nama} ({u.departemen?.kode})</td>
                     <td className="py-3.5 px-4">
@@ -271,6 +304,10 @@ export default function UsersManagementPage() {
             )}
 
             <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Email kerja</label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@perusahaan.co.id" className="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs font-medium text-slate-800" />
+            </div>
+            <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Nama Lengkap
               </label>
@@ -290,6 +327,8 @@ export default function UsersManagementPage() {
               </label>
               <input
                 type="password"
+                  minLength={10}
+                  maxLength={128}
                 required={!editingUser}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
