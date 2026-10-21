@@ -105,12 +105,12 @@ export function AppShell({
         <div className={`border-b border-slate-200 ${collapsedView ? "px-2 py-5 flex justify-center" : "px-4 py-4"}`}>
           {collapsedView ? (
             <div className="relative w-9 h-9 shrink-0 overflow-hidden rounded-md bg-white border border-slate-200">
-              <Image src="/logo-yazaki.jpg" alt="Yazaki" fill sizes="36px" className="object-contain p-1" />
+              <Image src="/stationaryapps/logo-yazaki.jpg" alt="Yazaki" fill sizes="36px" className="object-contain p-1" />
             </div>
           ) : (
             <>
               <div className="relative w-full h-11">
-                <Image src="/logo-yazaki.jpg" alt="Yazaki" fill sizes="256px" className="object-contain object-left" />
+                <Image src="/stationaryapps/logo-yazaki.jpg" alt="Yazaki" fill sizes="256px" className="object-contain object-left" />
               </div>
               <div className="text-xs font-bold text-slate-600 tracking-tight mt-2">
                 Sistem Pengajuan ATK
@@ -164,7 +164,7 @@ export function AppShell({
                   {ROLE_LABEL[session.user.role] || session.user.role}
                 </span>
                 <button
-                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  onClick={() => signOut({ callbackUrl: "/stationaryapps/login" })}
                   className="mt-3 w-full text-xs font-semibold text-slate-600 hover:text-brand-700 bg-white hover:bg-brand-50 border border-slate-200 hover:border-brand-200 px-3 py-2 rounded-md transition-colors"
                 >
                   Keluar
@@ -179,7 +179,7 @@ export function AppShell({
                   {session.user.name?.charAt(0)?.toUpperCase() || "U"}
                 </div>
                 <button
-                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  onClick={() => signOut({ callbackUrl: "/stationaryapps/login" })}
                   title="Keluar"
                   className="w-8 h-8 flex items-center justify-center rounded-md text-slate-500 hover:text-brand-700 hover:bg-brand-50 border border-slate-200 transition-colors"
                 >
@@ -245,7 +245,7 @@ export function AppShell({
           <List size={24} aria-hidden="true" />
         </button>
         <div className="relative w-8 h-8 overflow-hidden rounded-md bg-white border border-slate-200">
-          <Image src="/logo-yazaki.jpg" alt="Yazaki" fill sizes="32px" className="object-contain p-0.5" />
+          <Image src="/stationaryapps/logo-yazaki.jpg" alt="Yazaki" fill sizes="32px" className="object-contain p-0.5" />
         </div>
         {session && <NotificationBell />}
       </header>

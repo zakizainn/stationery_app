@@ -18,7 +18,7 @@ export function NotificationBell() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = () => {
-    fetch("/api/notifications")
+    fetch("/stationaryapps/api/notifications")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -49,7 +49,7 @@ export function NotificationBell() {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, dibaca: true } : n)));
     setUnreadCount((prev) => Math.max(0, prev - 1));
     try {
-      await fetch("/api/notifications", {
+      await fetch("/stationaryapps/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
@@ -63,7 +63,7 @@ export function NotificationBell() {
     setNotifications((prev) => prev.map((n) => ({ ...n, dibaca: true })));
     setUnreadCount(0);
     try {
-      await fetch("/api/notifications", {
+      await fetch("/stationaryapps/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ all: true }),

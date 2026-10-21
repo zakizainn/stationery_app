@@ -14,7 +14,7 @@ export default function BerandaPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/requests")
+    fetch("/stationaryapps/api/requests")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {

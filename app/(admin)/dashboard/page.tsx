@@ -21,7 +21,7 @@ export default function AdminDashboardPage() {
 
   const fetchApprovedRequests = () => {
     setLoading(true);
-    fetch("/api/requests")
+    fetch("/stationaryapps/api/requests")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -59,7 +59,7 @@ export default function AdminDashboardPage() {
     }));
 
     try {
-      const res = await fetch("/api/process", {
+      const res = await fetch("/stationaryapps/api/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

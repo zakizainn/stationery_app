@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { BERANDA_PER_ROLE, Role } from "@/types";
 
+const BASE_PATH = "/stationaryapps";
+
 // Path (tanpa route-group) yang boleh diakses tiap role.
 // Lihat dokumen spesifikasi teknis, bagian 3 (Role & Hak Akses).
 const ROUTE_ACCESS: Record<string, Role[]> = {
@@ -26,19 +28,19 @@ export async function proxy(req: NextRequest) {
   const token = await getToken({ req });
 
   if (!token) {
-    const loginUrl = new URL("/login", req.url);
+    const loginUrl = new URL(`${BASE_PATH}/login`, req.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
   if (token.accountBlocked) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.redirect(new URL(`${BASE_PATH}/login`, req.url));
   }
 
   const role = token.role as Role;
   const matchedPrefix = Object.keys(ROUTE_ACCESS).find((p) => pathname.startsWith(p));
 
   if (matchedPrefix && !ROUTE_ACCESS[matchedPrefix].includes(role)) {
-    return NextResponse.redirect(new URL(BERANDA_PER_ROLE[role], req.url));
+    return NextResponse.redirect(new URL(`${BASE_PATH}${BERANDA_PER_ROLE[role]}`, req.url));
   }
 
   return NextResponse.next();

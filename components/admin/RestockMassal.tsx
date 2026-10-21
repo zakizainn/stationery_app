@@ -97,7 +97,7 @@ export default function RestockMassal({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/restock/massal/impor", { method: "POST", body: fd });
+      const res = await fetch("/stationaryapps/api/restock/massal/impor", { method: "POST", body: fd });
       const json = await res.json();
       if (!json.success) {
         setPesan({ jenis: "error", teks: json.error || "Gagal membaca file." });
@@ -133,7 +133,7 @@ export default function RestockMassal({
     setMenyimpan(true);
     setPesan(null);
     try {
-      const res = await fetch("/api/restock/massal", {
+      const res = await fetch("/stationaryapps/api/restock/massal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -174,7 +174,7 @@ export default function RestockMassal({
           </p>
         </div>
         <a
-          href="/api/restock/massal/impor"
+          href="/stationaryapps/api/restock/massal/impor"
           className={`inline-flex items-center gap-2 text-xs font-bold text-brand-700 hover:text-brand-800 underline underline-offset-4 shrink-0 ${FOKUS} rounded`}
         >
           <DownloadSimple size={14} aria-hidden="true" />

@@ -70,7 +70,7 @@ export default function KatalogPage() {
     if (append) setLoadingMore(true);
     else setLoading(true);
 
-    let url = `/api/items?limit=${PAGE_SIZE}&offset=${offset}&`;
+    let url = `/stationaryapps/api/items?limit=${PAGE_SIZE}&offset=${offset}&`;
     if (search) url += `q=${encodeURIComponent(search)}&`;
     if (selectedKategori !== "semua") url += `kategori=${selectedKategori}&`;
 

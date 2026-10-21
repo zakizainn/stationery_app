@@ -22,7 +22,7 @@ export default function DepartemenManagementPage() {
 
   const fetchDepartemens = () => {
     setLoading(true);
-    fetch("/api/departemen")
+    fetch("/stationaryapps/api/departemen")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -57,13 +57,13 @@ export default function DepartemenManagementPage() {
     try {
       let res;
       if (editingDept) {
-        res = await fetch(`/api/departemen/${editingDept.id}`, {
+        res = await fetch(`/stationaryapps/api/departemen/${editingDept.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ kode, nama }),
         });
       } else {
-        res = await fetch("/api/departemen", {
+        res = await fetch("/stationaryapps/api/departemen", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ kode, nama }),
@@ -86,7 +86,7 @@ export default function DepartemenManagementPage() {
     if (!confirm("Apakah Anda yakin ingin menghapus departemen ini?")) return;
 
     try {
-      const res = await fetch(`/api/departemen/${id}`, { method: "DELETE" });
+      const res = await fetch(`/stationaryapps/api/departemen/${id}`, { method: "DELETE" });
       const data = await res.json();
 
       if (data.success) {

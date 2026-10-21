@@ -24,7 +24,7 @@ export default function ApprovalPage() {
 
   const fetchPendingRequests = () => {
     setLoading(true);
-    fetch("/api/requests?status=pending")
+    fetch("/stationaryapps/api/requests?status=pending")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -50,7 +50,7 @@ export default function ApprovalPage() {
   const handleAction = async (requestId: number, action: "approve" | "reject", catatan?: string) => {
     try {
       if (action === "approve") setSubmittingApprove(true);
-      const res = await fetch("/api/approval", {
+      const res = await fetch("/stationaryapps/api/approval", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId, action, catatan }),

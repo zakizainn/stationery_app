@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { STATUS_TONE } from "@/lib/status";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 interface User {
   id: number;
@@ -41,8 +42,8 @@ export default function UsersManagementPage() {
     setLoading(true);
     try {
       const [resUsers, resDepts] = await Promise.all([
-        fetch("/api/users"),
-        fetch("/api/departemen"),
+        fetch("/stationaryapps/api/users"),
+        fetch("/stationaryapps/api/departemen"),
       ]);
       const dataUsers = await resUsers.json();
       const dataDepts = await resDepts.json();
@@ -92,7 +93,7 @@ export default function UsersManagementPage() {
     try {
       let res;
       if (editingUser) {
-        res = await fetch(`/api/users/${editingUser.id}`, {
+        res = await fetch(`/stationaryapps/api/users/${editingUser.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -104,7 +105,7 @@ export default function UsersManagementPage() {
           }),
         });
       } else {
-        res = await fetch("/api/users", {
+        res = await fetch("/stationaryapps/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -134,7 +135,7 @@ export default function UsersManagementPage() {
     if (!confirm("Apakah Anda yakin ingin menonaktifkan pengguna ini? Akun tidak akan bisa login lagi.")) return;
 
     try {
-      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+      const res = await fetch(`/stationaryapps/api/users/${id}`, { method: "DELETE" });
       const data = await res.json();
 
       if (data.success) {
@@ -149,7 +150,7 @@ export default function UsersManagementPage() {
 
   const handleReactivate = async (id: number) => {
     try {
-      const res = await fetch(`/api/users/${id}`, {
+      const res = await fetch(`/stationaryapps/api/users/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ aktif: true }),
@@ -167,7 +168,7 @@ export default function UsersManagementPage() {
   };
 
   const handleRoleRequest = async (userId: number, action: "approve" | "reject") => {
-    const response = await fetch(`/api/users/${userId}`, {
+    const response = await fetch(`/stationaryapps/api/users/${userId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action }),
@@ -325,8 +326,7 @@ export default function UsersManagementPage() {
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 {editingUser ? "Password Baru (Biarkan kosong jika tidak diubah)" : "Password Internal"}
               </label>
-              <input
-                type="password"
+              <PasswordInput
                   minLength={10}
                   maxLength={128}
                 required={!editingUser}

@@ -1182,7 +1182,7 @@ export default function LaporanPage() {
     // Batalkan permintaan lama kalau periode berganti sebelum respons datang,
     // supaya respons lambat tidak menimpa data periode yang baru dipilih.
     const controller = new AbortController();
-    fetch(`/api/laporan?month=${month}`, { signal: controller.signal })
+    fetch(`/stationaryapps/api/laporan?month=${month}`, { signal: controller.signal })
       .then(async (res) => {
         const json = await res.json().catch(() => null);
         if (!res.ok || !json?.success) {
@@ -1219,7 +1219,7 @@ export default function LaporanPage() {
     setExporting(true);
     setExportError(null);
     try {
-      const res = await fetch(`/api/laporan/export?month=${month}`);
+      const res = await fetch(`/stationaryapps/api/laporan/export?month=${month}`);
       if (!res.ok) {
         const json = await res.json().catch(() => null);
         throw new Error(json?.error || `Server mengembalikan status ${res.status}.`);

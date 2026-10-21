@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 interface Departemen {
   id: number;
@@ -23,7 +24,7 @@ export default function RegisterForm() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/account-auth", { cache: "no-store" })
+    fetch("/stationaryapps/api/account-auth", { cache: "no-store" })
       .then(async (response) => {
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.error || "Gagal memuat departemen.");
@@ -44,7 +45,7 @@ export default function RegisterForm() {
     setError("");
     setMessage("");
     try {
-      const response = await fetch("/api/account-auth", {
+      const response = await fetch("/stationaryapps/api/account-auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "register", nik, nama, email, password, departemenId, requestedRole }),
@@ -89,7 +90,7 @@ export default function RegisterForm() {
             <span className="mt-1 block text-xs text-slate-500">Role selain staf baru aktif setelah disetujui Superadmin.</span>
           </label>
           <label className="block text-sm font-medium text-slate-700">Password
-            <input required type="password" minLength={10} maxLength={128} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2.5" />
+            <span className="mt-1 block"><PasswordInput required minLength={10} maxLength={128} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2.5" /></span>
             <span className="mt-1 block text-xs text-slate-500">Minimal 10 karakter.</span>
           </label>
           {message && <p role="status" className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}

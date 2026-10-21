@@ -22,7 +22,7 @@ export default function RiwayatPage() {
 
   const fetchRequests = () => {
     setLoading(true);
-    const url = filterMonth ? `/api/requests?month=${filterMonth}` : "/api/requests";
+    const url = filterMonth ? `/stationaryapps/api/requests?month=${filterMonth}` : "/stationaryapps/api/requests";
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
@@ -38,7 +38,7 @@ export default function RiwayatPage() {
     if (!confirm("Apakah Anda yakin ingin membatalkan pengajuan ini?")) return;
 
     try {
-      const res = await fetch(`/api/requests/${id}`, { method: "DELETE" });
+      const res = await fetch(`/stationaryapps/api/requests/${id}`, { method: "DELETE" });
       const data = await res.json();
 
       if (data.success) {

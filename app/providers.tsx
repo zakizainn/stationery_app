@@ -7,7 +7,7 @@ import { IconContext } from "@phosphor-icons/react";
 // supaya tidak ada yang mencampur gaya garis tebal/tipis antar halaman.
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
+    <SessionProvider basePath="/stationaryapps/api/auth">
       <IconContext.Provider value={{ weight: "regular" }}>{children}</IconContext.Provider>
     </SessionProvider>
   );

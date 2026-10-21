@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Apache XAMPP meneruskan aplikasi ini melalui /stationaryapps.
+  basePath: "/stationaryapps",
+  // Samakan URL berakhiran slash dengan RedirectMatch Apache.
+  trailingSlash: true,
 };
 
 export default nextConfig;

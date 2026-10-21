@@ -113,7 +113,7 @@ export default function MasterItemsPage() {
   const [alasanStok, setAlasanStok] = useState("");
 
   const fetchPersediaan = () => {
-    fetch("/api/items/persediaan")
+    fetch("/stationaryapps/api/items/persediaan")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -165,7 +165,7 @@ export default function MasterItemsPage() {
     // di bawah), jadi butuh daftar lengkap -- bypass default limit API dengan all=1.
     // includeInactive=1 supaya item yang dinonaktifkan (soft-delete) tetap kelihatan
     // di sini untuk dikelola/diaktifkan lagi, walau disembunyikan dari katalog staf.
-    fetch("/api/items?all=1&includeInactive=1")
+    fetch("/stationaryapps/api/items?all=1&includeInactive=1")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -183,7 +183,7 @@ export default function MasterItemsPage() {
     try {
       const formData = new FormData();
       formData.append("file", importFile);
-      const res = await fetch("/api/items/import", { method: "POST", body: formData });
+      const res = await fetch("/stationaryapps/api/items/import", { method: "POST", body: formData });
       const data = await res.json();
       if (data.success) {
         fetchItems(); // refresh daftar & stok terbaru
@@ -240,7 +240,7 @@ export default function MasterItemsPage() {
     setHargaHistoryItem(item);
     setLoadingHistory(true);
     try {
-      const res = await fetch(`/api/items/${item.id}/harga-history`);
+      const res = await fetch(`/stationaryapps/api/items/${item.id}/harga-history`);
       const data = await res.json();
       if (data.success) setHargaHistory(data.data);
     } catch (e) {
@@ -260,7 +260,7 @@ export default function MasterItemsPage() {
     setLoadingLapisan(true);
     setLapisanData(null);
     try {
-      const res = await fetch(`/api/items/${item.id}/lapisan`);
+      const res = await fetch(`/stationaryapps/api/items/${item.id}/lapisan`);
       const data = await res.json();
       if (data.success) {
         setLapisanData(data.data);
@@ -311,13 +311,13 @@ export default function MasterItemsPage() {
     try {
       let res;
       if (editingItem) {
-        res = await fetch(`/api/items/${editingItem.id}`, {
+        res = await fetch(`/stationaryapps/api/items/${editingItem.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
       } else {
-        res = await fetch("/api/items", {
+        res = await fetch("/stationaryapps/api/items", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -341,7 +341,7 @@ export default function MasterItemsPage() {
     if (!confirm("Apakah Anda yakin ingin menghapus/menonaktifkan barang ini?")) return;
 
     try {
-      const res = await fetch(`/api/items/${id}`, { method: "DELETE" });
+      const res = await fetch(`/stationaryapps/api/items/${id}`, { method: "DELETE" });
       const data = await res.json();
 
       if (data.success) {
@@ -358,7 +358,7 @@ export default function MasterItemsPage() {
 
   const handleReaktifkan = async (item: Item) => {
     try {
-      const res = await fetch(`/api/items/${item.id}`, {
+      const res = await fetch(`/stationaryapps/api/items/${item.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ aktif: true }),
@@ -849,7 +849,7 @@ export default function MasterItemsPage() {
             </p>
 
             <a
-              href="/api/items/import"
+              href="/stationaryapps/api/items/import"
               className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-700 hover:text-brand-800"
             >
               ⬇ Unduh data seluruh item (untuk diedit/restock massal)

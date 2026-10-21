@@ -71,8 +71,8 @@ export default function RestockPage() {
     setLoading(true);
     try {
       const [resItems, resMovements] = await Promise.all([
-        fetch("/api/items?all=1"),
-        fetch("/api/restock"),
+        fetch("/stationaryapps/api/items?all=1"),
+        fetch("/stationaryapps/api/restock"),
       ]);
 
       const dataItems = await resItems.json();
@@ -95,7 +95,7 @@ export default function RestockPage() {
     setMsg(null);
 
     try {
-      const res = await fetch("/api/restock", {
+      const res = await fetch("/stationaryapps/api/restock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

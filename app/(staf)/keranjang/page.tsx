@@ -80,7 +80,7 @@ export default function KeranjangPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/requests", {
+      const res = await fetch("/stationaryapps/api/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

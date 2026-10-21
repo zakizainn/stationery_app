@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { CircleNotch, WarningCircle } from "@phosphor-icons/react";
 import { STATUS_TONE } from "@/lib/status";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 function LoginForm() {
   const router = useRouter();
@@ -48,7 +49,7 @@ function LoginForm() {
       <aside className="hidden lg:flex flex-col justify-center gap-6 bg-slate-900 border-l-4 border-brand-600 px-14 xl:px-20 text-white">
         <div className="w-64 xl:w-72 bg-white rounded-md p-4">
           <Image
-            src="/logo-yazaki.jpg"
+            src="/stationaryapps/logo-yazaki.jpg"
             alt="Yazaki PT Jatim Autocomp Indonesia"
             width={1167}
             height={305}
@@ -70,7 +71,7 @@ function LoginForm() {
           <div className="lg:hidden text-center mb-8">
             <div className="inline-block w-44 bg-white border border-slate-200 rounded-md p-3 mb-3">
               <Image
-                src="/logo-yazaki.jpg"
+                src="/stationaryapps/logo-yazaki.jpg"
                 alt="Yazaki PT Jatim Autocomp Indonesia"
                 width={1167}
                 height={305}
@@ -103,9 +104,8 @@ function LoginForm() {
               <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="password">
                 Password Internal
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -138,8 +138,8 @@ function LoginForm() {
           </form>
 
           <div className="mt-5 flex justify-between gap-3 text-sm">
-            <a className="text-brand-700 hover:underline" href="/forgot-password">Lupa password?</a>
-            <a className="text-brand-700 hover:underline" href="/daftar">Daftar akun</a>
+            <a className="text-brand-700 hover:underline" href="/stationaryapps/forgot-password">Lupa password?</a>
+            <a className="text-brand-700 hover:underline" href="/stationaryapps/daftar">Daftar akun</a>
           </div>
         </div>
       </main>

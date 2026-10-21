@@ -71,7 +71,7 @@ export default function StokAwalPage() {
 
   const muatStatus = useCallback(async (p: string) => {
     try {
-      const res = await fetch(`/api/stok-awal?periode=${p}`);
+      const res = await fetch(`/stationaryapps/api/stok-awal?periode=${p}`);
       const json = await res.json();
       if (json.success) setStatus(json.data);
     } catch {
@@ -92,7 +92,7 @@ export default function StokAwalPage() {
       const fd = new FormData();
       fd.append("file", file);
       fd.append("periode", periode);
-      const res = await fetch("/api/stok-awal/impor", { method: "POST", body: fd });
+      const res = await fetch("/stationaryapps/api/stok-awal/impor", { method: "POST", body: fd });
       const json = await res.json();
       if (!json.success) {
         setPesan({ jenis: "error", teks: json.error || "Gagal membaca file." });
@@ -123,7 +123,7 @@ export default function StokAwalPage() {
     setMenerapkan(true);
     setPesan(null);
     try {
-      const res = await fetch("/api/stok-awal", {
+      const res = await fetch("/stationaryapps/api/stok-awal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -207,7 +207,7 @@ export default function StokAwalPage() {
           <li className="flex flex-wrap items-center gap-3">
             <span className="font-bold text-slate-900">1.</span>
             <a
-              href={`/api/stok-awal?periode=${periode}&template=1`}
+              href={`/stationaryapps/api/stok-awal?periode=${periode}&template=1`}
               className={`inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2.5 font-bold text-slate-800 hover:bg-slate-50 ${FOKUS}`}
             >
               <DownloadSimple size={14} aria-hidden="true" />
